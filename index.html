@@ -1,0 +1,3507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Corporate Dominion</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏢</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+/* ═══════════════════════════════════════════
+   CORPORATE DOMINION v7 — THEME
+   Dark zinc/indigo palette matching design brief
+═══════════════════════════════════════════ */
+
+:root {
+  /* ── Base surfaces ── */
+  --bg:      #09090b;   /* zinc-950 */
+  --surf:    #111115;   /* zinc-950/80 */
+  --s1:      #18181b;   /* zinc-900 */
+  --s2:      #1c1c20;   /* zinc-900/card */
+  --s3:      #27272a;   /* zinc-800 */
+  --s4:      #3f3f46;   /* zinc-700 */
+
+  /* ── Borders ── */
+  --border:  rgba(255,255,255,0.06);
+  --border-l: rgba(255,255,255,0.12);
+
+  /* ── Text ── */
+  --tx-hi:   #f4f4f5;   /* zinc-100 */
+  --tx-md:   #a1a1aa;   /* zinc-400 */
+  --tx-lo:   #52525b;   /* zinc-600 */
+
+  /* ── Player / accent colours ── */
+  --p0:      #6366f1;   /* YOU — indigo-500 */
+  --p0-dim:  rgba(99,102,241,.15);
+  --p1:      #f43f5e;   /* NEXUS — rose-500 */
+  --p1-dim:  rgba(244,63,94,.12);
+  --p2:      #10b981;   /* AXIOM — emerald-500 */
+  --p2-dim:  rgba(16,185,129,.12);
+  --p3:      #f59e0b;   /* VORTEX — amber-500 */
+  --p3-dim:  rgba(245,158,11,.12);
+
+  /* ── Region colours ── */
+  --r0: #3b82f6;        /* Silicon Valley — blue */
+  --r1: #10b981;        /* Wall Street — emerald */
+  --r2: #f43f5e;        /* Energy Hub — rose */
+  --r3: #a855f7;        /* Biomedical — purple */
+
+  /* ── Semantic ── */
+  --green:   #10b981;
+  --green-lt:#34d399;
+  --red:     #f43f5e;
+  --red-lt:  #fb7185;
+  --gold:    #f59e0b;
+  --gold-lt: #fbbf24;
+  --amber:   #f59e0b;
+  --blue:    #3b82f6;
+  --blue-lt: #60a5fa;
+  --purple:  #a855f7;
+  --indigo:  #6366f1;
+
+  /* ── Radius ── */
+  --r:  10px;
+  --r2:  7px;
+  --r3:  4px;
+
+  /* ── Transitions ── */
+  --t-fast: .10s ease;
+  --t-med:  .22s ease;
+  --t-slow: .38s ease;
+
+  /* ── Typography ── */
+  --font-ui:   'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%; overflow: hidden;
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--tx-hi);
+  -webkit-font-smoothing: antialiased;
+}
+button { cursor: pointer; background: none; border: none; color: inherit; font-family: inherit; }
+input  { font-family: inherit; }
+a      { color: inherit; text-decoration: none; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar       { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--s4); border-radius: 2px; }
+
+/* ── Utility numbers ── */
+.mono { font-family: var(--font-mono); }
+.gold { color: var(--gold); }
+.green { color: var(--green-lt); }
+.red   { color: var(--red-lt); }
+.muted { color: var(--tx-lo); }
+
+/* ── Global animations ── */
+@keyframes pulse-indigo { 0%,100%{box-shadow:none;} 50%{box-shadow:0 0 12px rgba(99,102,241,.5); border-color:var(--indigo);} }
+@keyframes pulse-rose   { 0%,100%{box-shadow:none;} 50%{box-shadow:0 0 12px rgba(244,63,94,.5);  border-color:var(--red);} }
+@keyframes pulse-amber  { 0%,100%{box-shadow:none;} 50%{box-shadow:0 0 12px rgba(245,158,11,.5); border-color:var(--amber);} }
+@keyframes pulse-emerald{ 0%,100%{box-shadow:none;} 50%{box-shadow:0 0 12px rgba(16,185,129,.5); border-color:var(--green);} }
+@keyframes fadeIn       { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:none;} }
+@keyframes blink        { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+@keyframes lvFlash      { 0%{background:rgba(16,185,129,.3);} 100%{background:transparent;} }
+
+/* ═══════════════════════════════════════════
+   CORPORATE DOMINION v7 — LAYOUT & COMPONENTS
+═══════════════════════════════════════════ */
+
+/* ── App shell ── */
+body   { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
+#main  { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+
+/* ════════════════════════════════════════
+   TOP BAR
+════════════════════════════════════════ */
+#topbar {
+  height: 52px; flex-shrink: 0;
+  background: var(--s1); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; padding: 0 16px;
+  z-index: 100;
+}
+#logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.logo-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--indigo), #4f46e5);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-weight: 800; font-size: 11px;
+  color: #fff; letter-spacing: .02em;
+}
+.logo-title {
+  font-family: var(--font-ui); font-weight: 800; font-size: 13px;
+  color: var(--tx-hi); letter-spacing: .04em;
+}
+.logo-sub {
+  font-family: var(--font-mono); font-size: 9px;
+  color: var(--tx-lo); letter-spacing: .1em;
+}
+#market-status {
+  flex: 1; text-align: center;
+  font-family: var(--font-mono); font-size: 9px;
+  color: var(--tx-lo); letter-spacing: .12em; text-transform: uppercase;
+}
+#market-status #phase-label {
+  font-weight: 700; transition: color var(--t-med);
+}
+.topbar-right { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.icon-btn {
+  width: 32px; height: 32px; border-radius: var(--r3);
+  border: 1px solid var(--border); color: var(--tx-lo);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; transition: all var(--t-fast);
+}
+.icon-btn:hover { border-color: var(--indigo); color: var(--indigo); }
+
+/* ════════════════════════════════════════
+   LEFT SIDEBAR — Players + Log
+════════════════════════════════════════ */
+#left {
+  width: 248px; flex-shrink: 0;
+  background: rgba(9,9,11,.85); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sidebar-hdr {
+  padding: 10px 14px 8px;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--tx-lo);
+  display: flex; align-items: center; gap: 6px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.sidebar-hdr-icon { font-size: 11px; }
+.sidebar-count {
+  margin-left: auto; font-size: 8px; padding: 1px 6px;
+  background: var(--s3); border-radius: 10px; color: var(--tx-md);
+}
+.log-hdr { margin-top: auto; border-top: 1px solid var(--border); }
+
+/* Player entries */
+#player-list { flex-shrink: 0; overflow: hidden; }
+.pe {
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  position: relative; transition: background var(--t-fast);
+}
+.pe.active-p { background: rgba(99,102,241,.04); }
+.pe-active-bar {
+  position: absolute; left: 0; top: 10px; bottom: 10px;
+  width: 2px; border-radius: 0 2px 2px 0;
+}
+.pe-name {
+  font-family: var(--font-ui); font-weight: 600; font-size: 13px;
+  margin-bottom: 6px; padding-left: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.pe-star { font-size: 10px; opacity: .7; }
+.pe-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding-left: 8px; margin-bottom: 6px; }
+.pe-stat-lbl { font-family: var(--font-mono); font-size: 8px; color: var(--tx-lo); text-transform: uppercase; letter-spacing: .08em; }
+.pe-cash { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--green-lt); }
+.pe-nw   { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--tx-md); text-align: right; }
+.pe-bars { padding-left: 8px; display: flex; gap: 3px; margin-top: 2px; }
+.pe-bar  { height: 3px; flex: 1; border-radius: 2px; transition: all var(--t-med); }
+
+/* Activity log */
+#log-wrap { flex: 1; min-height: 0; overflow: hidden; }
+#log-area  { height: 100%; overflow-y: auto; padding: 4px 6px; }
+.le {
+  font-family: var(--font-mono); font-size: 8px; line-height: 1.6;
+  padding: 2px 6px; border-radius: 3px; margin-bottom: 1px;
+  color: var(--tx-lo);
+}
+.le.good  { color: var(--green-lt); }
+.le.bad   { color: var(--red-lt); }
+.le.warn  { color: var(--amber); }
+.le.info  { color: var(--tx-md); }
+.le.phase { color: var(--indigo); font-weight: 700; }
+.le.event { color: var(--purple); }
+
+/* ════════════════════════════════════════
+   CENTER — Board
+════════════════════════════════════════ */
+#center {
+  flex: 1; display: flex; flex-direction: column;
+  min-width: 0; overflow: hidden; position: relative;
+}
+#info-strip {
+  padding: 6px 16px; flex-shrink: 0;
+  font-family: var(--font-mono); font-size: 9px; color: var(--tx-lo);
+  background: rgba(0,0,0,.3); border-bottom: 1px solid var(--border);
+  min-height: 26px; display: flex; align-items: center;
+  white-space: normal; line-height: 1.5;
+}
+#event-bar {
+  display: none; padding: 4px 16px; flex-shrink: 0;
+  background: linear-gradient(90deg, rgba(168,85,247,.1), transparent);
+  border-bottom: 1px solid rgba(168,85,247,.2);
+  font-family: var(--font-mono); font-size: 9px; color: var(--purple);
+}
+#event-bar.show { display: block; }
+
+/* Board — 4-column region layout */
+#board {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 0; padding: 0 0 200px 0; /* bottom pad for dock */
+}
+.region-col {
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+  min-height: 0;
+}
+.region-col:last-child { border-right: none; }
+
+/* Region header */
+.reg-hdr {
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  position: sticky; top: 0; background: var(--bg); z-index: 5;
+}
+.reg-icon { font-size: 13px; }
+.reg-name {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase;
+}
+.reg-ctrl {
+  margin-left: auto; font-family: var(--font-mono);
+  font-size: 7px; padding: 2px 6px; border-radius: 10px;
+  font-weight: 700; letter-spacing: .04em;
+}
+
+.reg-hdr.r0 .reg-name { color: var(--r0); }
+.reg-hdr.r1 .reg-name { color: var(--r1); }
+.reg-hdr.r2 .reg-name { color: var(--r2); }
+.reg-hdr.r3 .reg-name { color: var(--r3); }
+
+/* Company card list inside region */
+.reg-companies { padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+
+/* Company card */
+.cc {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 12px 12px 10px;
+  cursor: pointer; transition: all var(--t-fast);
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; gap: 6px;
+  min-height: 90px;
+}
+.cc:hover { border-color: var(--border-l); background: var(--s3); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,.4); }
+
+/* Owner-tinted backgrounds */
+.cc.owned-0 { background: rgba(99,102,241,.06);  border-color: rgba(99,102,241,.3); }
+.cc.owned-1 { background: rgba(244,63,94,.06);   border-color: rgba(244,63,94,.3); }
+.cc.owned-2 { background: rgba(16,185,129,.06);  border-color: rgba(16,185,129,.3); }
+.cc.owned-3 { background: rgba(245,158,11,.06);  border-color: rgba(245,158,11,.3); }
+
+/* Action highlight animations */
+.cc.hi-acq  { animation: pulse-emerald 1.4s infinite; }
+.cc.hi-upg  { animation: pulse-indigo  1.4s infinite; }
+.cc.hi-tak  { animation: pulse-rose    1.4s infinite; }
+.cc.hi-sell { animation: pulse-amber   1.4s infinite; }
+.cc.lv-flash { animation: lvFlash .7s ease-out; }
+
+.co-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.co-name {
+  font-family: var(--font-ui); font-weight: 600; font-size: 13px;
+  color: var(--tx-hi); line-height: 1.2;
+  white-space: normal; word-break: break-word;
+}
+.co-owner-badge {
+  width: 20px; height: 20px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 8px; font-weight: 800;
+  flex-shrink: 0; margin-left: 6px;
+}
+.co-rev-row {
+  display: flex; align-items: flex-end; gap: 6px;
+}
+.co-rev-lbl {
+  font-family: var(--font-mono); font-size: 8px;
+  color: var(--tx-lo); letter-spacing: .08em; text-transform: uppercase;
+  line-height: 1;
+}
+.co-rev-val {
+  font-family: var(--font-mono); font-size: 16px; font-weight: 700;
+  line-height: 1;
+}
+/* Revenue color per owner */
+.cc.owned-0 .co-rev-val { color: var(--p0); }
+.cc.owned-1 .co-rev-val { color: var(--p1); }
+.cc.owned-2 .co-rev-val { color: var(--p2); }
+.cc.owned-3 .co-rev-val { color: var(--p3); }
+.cc:not([class*="owned-"]) .co-rev-val { color: var(--tx-md); }
+
+.co-meta { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.co-lv { font-family: var(--font-mono); font-size: 7px; color: var(--tx-lo); }
+.co-trait {
+  font-family: var(--font-mono); font-size: 7px; font-weight: 700;
+  padding: 1px 4px; border-radius: 3px;
+}
+.lv-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: var(--s4); }
+.lv-fill { height: 100%; transition: width var(--t-med); }
+.acq-cost {
+  position: absolute; bottom: 6px; right: 8px;
+  font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  color: var(--gold-lt); opacity: 0; transition: opacity var(--t-fast);
+  background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.25);
+  padding: 1px 5px; border-radius: 6px;
+}
+.cc:hover .acq-cost, .cc.hi-acq .acq-cost { opacity: 1; }
+
+/* ════════════════════════════════════════
+   FLOATING ACTION DOCK
+════════════════════════════════════════ */
+#action-dock {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  z-index: 50; width: max-content; max-width: calc(100vw - 32px);
+}
+#actions-pill {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(15,15,18,.9); backdrop-filter: blur(12px);
+  border: 1px solid var(--border-l); border-radius: 20px;
+  padding: 5px 14px;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: .1em; color: var(--tx-md); text-transform: uppercase;
+}
+.ap-bolt { color: var(--indigo); font-size: 11px; }
+#ap-count { color: var(--tx-hi); font-size: 13px; }
+
+#dock-btns {
+  display: flex; gap: 6px; align-items: center;
+  background: rgba(15,15,18,.92); backdrop-filter: blur(16px);
+  border: 1px solid var(--border-l); border-radius: 18px;
+  padding: 8px 10px;
+}
+.dock-btn {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 68px; height: 62px; border-radius: 12px;
+  border: 1px solid transparent;
+  color: var(--tx-lo); transition: all var(--t-fast);
+  gap: 2px; touch-action: manipulation;
+}
+.dock-btn:hover, .dock-btn.active {
+  background: var(--s3); border-color: var(--border-l);
+  color: var(--tx-hi);
+}
+.dock-btn.active { border-color: var(--indigo); color: var(--indigo); box-shadow: 0 0 14px rgba(99,102,241,.25); }
+.dock-num {
+  position: absolute; top: -7px; right: -7px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--s4); border: 1px solid var(--border-l);
+  font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  color: var(--tx-lo); display: flex; align-items: center; justify-content: center;
+}
+.dock-btn.active .dock-num { background: var(--indigo); color: #fff; border-color: var(--indigo); }
+.dock-icon { font-size: 16px; line-height: 1; }
+.dock-lbl { font-family: var(--font-mono); font-size: 7px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+
+/* End Turn button */
+.end-turn-btn {
+  background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.3);
+  color: var(--green-lt); border-radius: 10px; padding: 7px 20px;
+  font-family: var(--font-ui); font-weight: 700; font-size: 11px;
+  letter-spacing: .04em; transition: all var(--t-fast);
+}
+.end-turn-btn:hover:not(:disabled) { background: rgba(16,185,129,.2); border-color: var(--green); }
+.end-turn-btn:disabled { opacity: .28; cursor: not-allowed; }
+
+/* ════════════════════════════════════════
+   RIGHT SIDEBAR
+════════════════════════════════════════ */
+#right {
+  width: 220px; flex-shrink: 0;
+  background: rgba(9,9,11,.7); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow-y: auto;
+}
+.hand-hdr { border-top: 1px solid var(--border); }
+.hand-badge {
+  margin-left: auto; font-size: 8px; padding: 1px 6px;
+  background: rgba(99,102,241,.15); border: 1px solid rgba(99,102,241,.3);
+  color: var(--indigo); border-radius: 10px; font-family: var(--font-mono);
+}
+
+/* CEO display */
+.ceo-block { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.ceo-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(99,102,241,.15); border: 1px solid rgba(99,102,241,.3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-weight: 800; font-size: 16px;
+  color: var(--indigo); margin-bottom: 8px;
+}
+.ceo-name { font-weight: 700; font-size: 13px; color: var(--tx-hi); margin-bottom: 2px; }
+.ceo-title { font-family: var(--font-mono); font-size: 9px; color: var(--indigo); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+.ceo-bonus {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.2);
+  padding: 3px 8px; border-radius: var(--r3);
+  font-family: var(--font-mono); font-size: 9px; color: var(--gold-lt);
+}
+
+/* Competitor intel */
+.intel-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 14px; border-bottom: 1px solid var(--border);
+  transition: background var(--t-fast);
+}
+.intel-row:hover { background: rgba(255,255,255,.02); }
+.intel-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.intel-name { font-family: var(--font-mono); font-size: 10px; color: var(--tx-md); flex: 1; font-weight: 600; }
+.intel-nw   { font-family: var(--font-mono); font-size: 10px; color: var(--tx-lo); }
+
+/* Tactical cards */
+.tcard {
+  margin: 6px 10px; padding: 10px 12px;
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: var(--r2); cursor: pointer;
+  transition: all var(--t-fast); position: relative;
+}
+.tcard:hover:not(.used) { border-color: var(--indigo); background: rgba(99,102,241,.06); transform: translateX(4px); }
+.tcard.used { opacity: .38; pointer-events: none; }
+.tc-header { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.tc-icon { font-size: 14px; }
+.tc-nm { font-family: var(--font-ui); font-weight: 700; font-size: 11px; color: var(--tx-hi); }
+.tc-ef { font-family: var(--font-mono); font-size: 8px; color: var(--tx-lo); line-height: 1.5; }
+.tc-used { position: absolute; top: 4px; right: 6px; font-family: var(--font-mono); font-size: 7px; color: var(--tx-lo); }
+
+/* ════════════════════════════════════════
+   MODAL
+════════════════════════════════════════ */
+#modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+  z-index: 800; padding: 16px;
+}
+#modal-overlay.show { display: flex; }
+#modal {
+  background: var(--s1); border: 1px solid var(--border-l);
+  border-radius: var(--r); padding: 20px;
+  width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,.7);
+  animation: fadeIn .18s ease;
+}
+.modal-hdr {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+#modal h2, .modal-hdr h2 {
+  font-family: var(--font-ui); font-weight: 700; font-size: 15px; color: var(--tx-hi);
+}
+.modal-close {
+  width: 24px; height: 24px; border-radius: var(--r3);
+  border: 1px solid var(--border); color: var(--tx-lo);
+  font-size: 12px; display: flex; align-items: center; justify-content: center;
+  transition: all var(--t-fast);
+}
+.modal-close:hover { border-color: var(--red); color: var(--red); }
+.mrow { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.ml { font-family: var(--font-mono); font-size: 9px; color: var(--tx-lo); letter-spacing: .08em; }
+.mv { font-family: var(--font-mono); font-size: 11px; color: var(--tx-hi); font-weight: 600; }
+.mv.gold  { color: var(--gold-lt); }
+.mv.green { color: var(--green-lt); }
+.mv.red   { color: var(--red-lt); }
+.cost-block {
+  background: rgba(245,158,11,.06); border: 1px solid rgba(245,158,11,.2);
+  border-radius: var(--r2); padding: 10px 14px;
+}
+.cost-block.sell-v { background: rgba(245,158,11,.06); border-color: rgba(245,158,11,.2); }
+.cb-lbl { font-family: var(--font-mono); font-size: 8px; color: var(--tx-lo); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 3px; }
+.cb-num { font-family: var(--font-mono); font-size: 26px; font-weight: 700; color: var(--gold-lt); line-height: 1.1; }
+.cb-sub { font-family: var(--font-mono); font-size: 8px; color: var(--tx-lo); margin-top: 4px; line-height: 1.6; }
+.fort-warn { font-family: var(--font-mono); font-size: 9px; color: var(--amber); padding: 5px 8px; background: rgba(245,158,11,.07); border-radius: var(--r3); margin-top: 6px; }
+.prob-bar { height: 8px; background: var(--s4); border-radius: 4px; overflow: hidden; margin: 6px 0; }
+.prob-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; justify-content: flex-end; padding-right: 4px; font-family: var(--font-mono); font-size: 7px; color: #fff; font-weight: 700; transition: width var(--t-med); }
+.mbtns { display: flex; gap: 8px; margin-top: 14px; }
+.mbtn {
+  flex: 1; padding: 9px; border-radius: var(--r2);
+  font-family: var(--font-ui); font-weight: 700; font-size: 11px;
+  border: 1px solid var(--border); color: var(--tx-md); transition: all var(--t-fast);
+}
+.mbtn:hover { border-color: var(--border-l); color: var(--tx-hi); }
+.mbtn.pri     { background: rgba(99,102,241,.12);  border-color: var(--indigo);  color: var(--indigo); }
+.mbtn.pri:hover { background: rgba(99,102,241,.22); }
+.mbtn.danger  { background: rgba(244,63,94,.1);   border-color: var(--red);   color: var(--red-lt); }
+.mbtn.danger:hover { background: rgba(244,63,94,.2); }
+.mbtn.success { background: rgba(16,185,129,.1);  border-color: var(--green); color: var(--green-lt); }
+.mbtn.success:hover { background: rgba(16,185,129,.2); }
+
+/* Rulebook */
+.rb-s { margin-bottom: 14px; }
+.rb-s h3 { font-family: var(--font-ui); font-weight: 700; font-size: 11px; color: var(--gold-lt); text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 7px; }
+.rb-s p, .rb-s li { font-family: var(--font-mono); font-size: 9px; color: var(--tx-md); line-height: 1.75; margin-bottom: 2px; }
+.rb-s ul { padding-left: 0; list-style: none; }
+.rb-s ul li::before { content: '·'; color: var(--gold-lt); margin-right: 6px; }
+.rg { color: var(--green-lt); } .rr { color: var(--red-lt); }
+.ro { color: var(--amber); }    .rb { color: var(--blue-lt); }
+
+/* Sound modal */
+.snd-modes { display: flex; gap: 6px; margin-bottom: 12px; }
+.snd-mode { flex: 1; padding: 9px 6px; text-align: center; border-radius: var(--r2); border: 1px solid var(--border); font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--tx-lo); cursor: pointer; transition: all var(--t-fast); }
+.snd-mode.on { border-color: var(--indigo); background: rgba(99,102,241,.1); color: var(--indigo); }
+.vol-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.vol-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--tx-lo); flex-shrink: 0; }
+input[type=range] { flex: 1; accent-color: var(--indigo); }
+.snd-note { font-family: var(--font-mono); font-size: 8px; color: var(--tx-lo); }
+
+/* Card menu */
+.card-pick { display: flex; align-items: center; justify-content: space-between; background: var(--s2); border: 1px solid var(--border); border-radius: var(--r2); padding: 10px 12px; margin-bottom: 6px; }
+.card-info { display: flex; align-items: center; gap: 8px; }
+.card-ico { font-size: 18px; }
+.card-nm  { font-weight: 700; font-size: 11px; color: var(--tx-hi); }
+.card-ef  { font-family: var(--font-mono); font-size: 8px; color: var(--tx-lo); }
+
+/* ════════════════════════════════════════
+   PHASE ANNOUNCE
+════════════════════════════════════════ */
+#phase-announce {
+  position: fixed; inset: 0;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.75); backdrop-filter: blur(8px);
+  z-index: 700;
+}
+#phase-announce.show { display: flex; }
+.pa-inner {
+  background: var(--s1); border: 1px solid var(--border-l);
+  border-radius: var(--r); padding: 28px 32px;
+  text-align: center; min-width: 280px; max-width: 400px;
+  animation: fadeIn .2s ease;
+}
+.pa-round { font-family: var(--font-mono); font-size: 9px; color: var(--tx-lo); letter-spacing: .14em; text-transform: uppercase; margin-bottom: 8px; }
+.pa-phase { font-family: var(--font-ui); font-weight: 800; font-size: 30px; margin-bottom: 6px; letter-spacing: .04em; }
+.pa-effect { font-family: var(--font-mono); font-size: 10px; color: var(--tx-md); line-height: 1.7; margin-bottom: 10px; }
+.pa-event { display: none; font-family: var(--font-mono); font-size: 9px; color: var(--purple); background: rgba(168,85,247,.08); border: 1px solid rgba(168,85,247,.2); border-radius: var(--r3); padding: 5px 10px; margin-bottom: 10px; }
+.pa-event.show { display: block; }
+.pa-progress { height: 3px; background: var(--s4); border-radius: 2px; overflow: hidden; margin: 12px 0 14px; }
+.pa-pfill { height: 100%; width: 0; border-radius: 2px; }
+.pa-dismiss { padding: 7px 20px; border-radius: var(--r2); border: 1px solid var(--border-l); color: var(--tx-md); font-family: var(--font-ui); font-weight: 600; font-size: 11px; transition: all var(--t-fast); }
+.pa-dismiss:hover { border-color: var(--indigo); color: var(--indigo); }
+
+/* ════════════════════════════════════════
+   DICE OVERLAY
+════════════════════════════════════════ */
+#dice-overlay {
+  position: fixed; inset: 0; display: none;
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,.8); backdrop-filter: blur(8px); z-index: 900;
+}
+#dice-overlay.show { display: flex; }
+.dice-box { background: var(--s1); border: 1px solid var(--border-l); border-radius: var(--r); padding: 28px 32px; text-align: center; min-width: 240px; animation: fadeIn .15s ease; }
+.dice-title { font-family: var(--font-mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--tx-lo); margin-bottom: 8px; }
+.dice-target { font-family: var(--font-ui); font-weight: 700; font-size: 13px; color: var(--tx-hi); margin-bottom: 4px; }
+.dice-need { font-family: var(--font-mono); font-size: 9px; color: var(--tx-lo); margin-bottom: 16px; }
+.dice-num { font-family: var(--font-mono); font-size: 40px; font-weight: 700; color: var(--tx-hi); margin-bottom: 8px; transition: color .2s; }
+.dice-result { font-family: var(--font-ui); font-weight: 800; font-size: 18px; letter-spacing: .06em; min-height: 24px; }
+
+/* ════════════════════════════════════════
+   TUTORIAL
+════════════════════════════════════════ */
+#tut-overlay {
+  position: fixed; inset: 0; z-index: 850;
+  background: rgba(0,0,0,.6); display: none; pointer-events: none;
+}
+#tut-overlay.show { display: block; pointer-events: auto; }
+#tut-spot {
+  position: fixed; border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.6);
+  border: 2px solid var(--indigo);
+  transition: all var(--t-med); pointer-events: none;
+}
+.tut-card {
+  position: fixed; width: 300px;
+  background: var(--s1); border: 1px solid var(--indigo);
+  border-radius: var(--r); padding: 18px; z-index: 851;
+  box-shadow: 0 8px 32px rgba(0,0,0,.6);
+  animation: fadeIn .18s ease;
+}
+.tut-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+#tut-step { font-family: var(--font-mono); font-size: 8px; color: var(--tx-lo); letter-spacing: .1em; text-transform: uppercase; }
+#tut-dots { display: flex; gap: 4px; }
+.tut-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--s4); transition: background var(--t-fast); }
+.tut-dot.on { background: var(--indigo); }
+.tut-title { font-family: var(--font-ui); font-weight: 700; font-size: 14px; color: var(--tx-hi); margin-bottom: 8px; }
+.tut-body { font-family: var(--font-mono); font-size: 9px; color: var(--tx-md); line-height: 1.8; margin-bottom: 14px; }
+.tut-kbd { display: inline-flex; align-items: center; justify-content: center; background: var(--s3); border: 1px solid var(--border-l); border-radius: 3px; padding: 1px 5px; font-size: 8px; color: var(--tx-hi); margin: 0 1px; }
+.tut-nav { display: flex; gap: 8px; }
+.tut-btn { flex: 1; padding: 7px; border-radius: var(--r2); font-family: var(--font-ui); font-weight: 700; font-size: 10px; border: 1px solid; transition: all var(--t-fast); }
+.tut-btn.ghost { border-color: var(--border); color: var(--tx-lo); }
+.tut-btn.ghost:hover { border-color: var(--border-l); color: var(--tx-md); }
+.tut-btn.pri { border-color: var(--indigo); background: rgba(99,102,241,.12); color: var(--indigo); }
+.tut-btn.pri:hover { background: rgba(99,102,241,.22); }
+.tut-skip { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); font-family: var(--font-mono); font-size: 9px; color: var(--tx-lo); border: 1px solid var(--border); padding: 4px 12px; border-radius: 20px; cursor: pointer; pointer-events: auto; background: var(--s2); }
+.tut-skip:hover { color: var(--tx-md); }
+
+/* ════════════════════════════════════════
+   AI OVERLAY
+════════════════════════════════════════ */
+.ai-overlay-global {
+  position: fixed; inset: 0; display: none;
+  align-items: center; justify-content: center;
+  z-index: 600; pointer-events: none;
+}
+.ai-overlay-global.show { display: flex; }
+.ai-lbl {
+  padding: 8px 20px; border-radius: 20px;
+  border: 1px solid var(--border-l); background: rgba(9,9,11,.9);
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: .12em; color: var(--tx-md);
+}
+
+/* ════════════════════════════════════════
+   SETUP SCREEN
+════════════════════════════════════════ */
+#setup-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+.setup-box {
+  background: var(--s1); border: 1px solid var(--border-l);
+  border-radius: var(--r); padding: 28px; width: 100%; max-width: 440px;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 24px 80px rgba(0,0,0,.7);
+}
+.setup-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+.setup-logo-icon {
+  width: 46px; height: 46px; border-radius: 10px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--indigo), #4f46e5);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-weight: 800; font-size: 14px; color: #fff;
+}
+.setup-logo-title { font-family: var(--font-ui); font-weight: 800; font-size: 18px; color: var(--tx-hi); }
+.setup-logo-sub { font-family: var(--font-mono); font-size: 8px; color: var(--tx-lo); letter-spacing: .12em; margin-top: 2px; }
+.setup-tabs { display: flex; border: 1px solid var(--border); border-radius: var(--r2); overflow: hidden; margin-bottom: 18px; }
+.setup-tab { flex: 1; padding: 9px; text-align: center; font-family: var(--font-ui); font-weight: 700; font-size: 11px; color: var(--tx-lo); cursor: pointer; transition: all var(--t-fast); }
+.setup-tab.active { background: rgba(99,102,241,.1); color: var(--indigo); border-bottom: 2px solid var(--indigo); }
+.setup-pane { display: none; }
+.setup-pane.active { display: block; }
+.setup-sect { font-family: var(--font-mono); font-size: 8px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--tx-lo); margin-bottom: 10px; margin-top: 4px; }
+.mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px; }
+.mode-card { background: var(--s2); border: 1px solid var(--border); border-radius: var(--r2); padding: 14px; text-align: center; cursor: pointer; transition: all var(--t-fast); }
+.mode-card.sel { border-color: var(--indigo); background: rgba(99,102,241,.08); }
+.mode-card:hover:not(.sel) { border-color: var(--border-l); }
+.mc-icon { font-size: 22px; margin-bottom: 6px; }
+.mc-title { font-weight: 700; font-size: 13px; color: var(--tx-hi); margin-bottom: 3px; }
+.mc-desc { font-family: var(--font-mono); font-size: 8px; color: var(--tx-lo); line-height: 1.6; }
+.bonus-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.bonus-row { display: flex; align-items: center; gap: 10px; background: var(--s2); border: 1px solid var(--border); border-radius: var(--r2); padding: 9px 12px; }
+.bonus-ico { font-size: 18px; }
+.bonus-pnm { font-weight: 700; font-size: 11px; }
+.bonus-desc { font-family: var(--font-mono); font-size: 8px; color: var(--tx-lo); }
+.bonus-desc span { color: var(--gold-lt); }
+.tut-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.tut-row label { font-size: 11px; color: var(--tx-md); cursor: pointer; }
+.tut-row input { accent-color: var(--indigo); }
+.start-btn {
+  width: 100%; padding: 12px; border-radius: var(--r2);
+  background: rgba(99,102,241,.12); border: 1px solid var(--indigo);
+  color: var(--indigo); font-family: var(--font-ui); font-weight: 700;
+  font-size: 13px; letter-spacing: .04em; transition: all var(--t-fast); margin-bottom: 4px;
+}
+.start-btn:hover { background: rgba(99,102,241,.22); }
+.setup-note { font-family: var(--font-mono); font-size: 8px; color: var(--tx-lo); line-height: 1.7; text-align: center; margin-top: 10px; }
+.join-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.room-input { flex: 1; background: var(--s2); border: 1px solid var(--border); border-radius: var(--r2); padding: 10px 12px; color: var(--tx-hi); font-family: var(--font-mono); font-size: 18px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; outline: none; transition: border-color var(--t-fast); }
+.room-input:focus { border-color: var(--indigo); }
+
+/* ════════════════════════════════════════
+   LOBBY
+════════════════════════════════════════ */
+#lobby-overlay { position: fixed; inset: 0; background: var(--bg); display: none; align-items: center; justify-content: center; z-index: 920; padding: 16px; }
+#lobby-overlay.show { display: flex; }
+.lobby-box { background: var(--s1); border: 1px solid var(--indigo); border-top: 2px solid var(--indigo); border-radius: var(--r); padding: 26px; width: 100%; max-width: 460px; box-shadow: 0 24px 80px rgba(0,0,0,.7); }
+.lobby-title { font-family: var(--font-ui); font-weight: 800; font-size: 18px; color: var(--tx-hi); margin-bottom: 3px; }
+.lobby-sub   { font-family: var(--font-mono); font-size: 9px; color: var(--tx-lo); letter-spacing: .1em; margin-bottom: 20px; }
+.room-code-block { background: var(--s2); border: 1px solid var(--border); border-radius: var(--r2); padding: 14px; text-align: center; margin-bottom: 16px; }
+.room-code-lbl  { font-family: var(--font-mono); font-size: 8px; color: var(--tx-lo); letter-spacing: .14em; text-transform: uppercase; margin-bottom: 6px; }
+.room-code-val  { font-family: var(--font-mono); font-size: 36px; font-weight: 700; color: var(--indigo); letter-spacing: .18em; cursor: pointer; user-select: all; transition: opacity var(--t-fast); }
+.room-code-val:hover { opacity: .7; }
+.room-code-hint { font-family: var(--font-mono); font-size: 8px; color: var(--tx-lo); margin-top: 4px; }
+.lobby-slots { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.lslot { background: var(--s2); border: 1px solid var(--border); border-radius: var(--r2); padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+.lslot-num  { font-family: var(--font-mono); font-size: 10px; color: var(--tx-lo); width: 18px; }
+.lslot-icon { font-size: 16px; }
+.lslot-name { font-family: var(--font-ui); font-weight: 700; font-size: 12px; flex: 1; }
+.lslot-badge { font-family: var(--font-mono); font-size: 8px; font-weight: 700; padding: 2px 7px; border-radius: 10px; letter-spacing: .06em; }
+.lslot-badge.host  { background: rgba(245,158,11,.1);  color: var(--gold-lt); border: 1px solid rgba(245,158,11,.3); }
+.lslot-badge.ready { background: rgba(16,185,129,.1);  color: var(--green-lt); border: 1px solid rgba(16,185,129,.3); }
+.lslot-badge.wait  { background: var(--s3); color: var(--tx-lo); border: 1px solid var(--border); }
+.lslot-badge.ai    { background: rgba(99,102,241,.1); color: var(--indigo); border: 1px solid rgba(99,102,241,.3); }
+.lobby-status { font-family: var(--font-mono); font-size: 10px; color: var(--tx-md); padding: 8px 10px; background: var(--s2); border-radius: var(--r2); margin-bottom: 14px; min-height: 36px; display: flex; align-items: center; gap: 8px; }
+.lobby-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.lobby-dot.connecting { background: var(--amber); animation: blink .8s infinite; }
+.lobby-dot.ok  { background: var(--green-lt); }
+.lobby-dot.err { background: var(--red-lt); }
+.lobby-btns { display: flex; gap: 8px; }
+.lobby-btn { flex: 1; padding: 10px; border-radius: var(--r2); font-family: var(--font-ui); font-weight: 700; font-size: 11px; text-align: center; border: 1px solid; transition: all var(--t-fast); }
+.lobby-btn.pri   { background: rgba(99,102,241,.12); border-color: var(--indigo); color: var(--indigo); }
+.lobby-btn.pri:hover { background: rgba(99,102,241,.22); }
+.lobby-btn.ghost { background: transparent; border-color: var(--border); color: var(--tx-md); }
+.lobby-btn.ghost:hover { border-color: var(--border-l); color: var(--tx-hi); }
+.lobby-btn:disabled { opacity: .28; cursor: not-allowed; pointer-events: none; }
+
+/* ════════════════════════════════════════
+   PLAYER STRIP (mobile)
+════════════════════════════════════════ */
+#player-strip { display: none; flex-shrink: 0; background: var(--s1); border-bottom: 1px solid var(--border); }
+.ps-col { flex: 1; display: flex; flex-direction: column; padding: 6px 8px; border-right: 1px solid var(--border); gap: 1px; min-width: 0; }
+.ps-col:last-of-type { border-right: none; }
+.ps-col.ps-active { background: rgba(99,102,241,.04); border-top: 2px solid var(--indigo); }
+.ps-name { font-family: var(--font-mono); font-size: 7px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ps-cash { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--gold-lt); line-height: 1.1; }
+.ps-nw   { font-family: var(--font-mono); font-size: 7px; color: var(--tx-lo); }
+.ps-dots { display: flex; gap: 2px; margin-top: 2px; }
+.ps-dot  { width: 5px; height: 5px; border-radius: 50%; }
+.ps-rounds { flex-shrink: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 5px 6px; gap: 3px; border-left: 1px solid var(--border); background: var(--surf); }
+.ps-r { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border); background: var(--s4); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 6px; color: var(--tx-lo); transition: all var(--t-fast); }
+.ps-r.cur  { border-color: var(--indigo); color: var(--indigo); background: rgba(99,102,241,.12); }
+.ps-r.done { background: transparent; border-color: transparent; }
+
+/* ════════════════════════════════════════
+   TOASTS / LOCK
+════════════════════════════════════════ */
+#auto-end-toast {
+  position: fixed; bottom: 220px; left: 50%; transform: translateX(-50%) translateY(12px);
+  background: var(--s1); border: 1px solid var(--green); border-radius: 20px;
+  padding: 7px 18px; font-family: var(--font-mono); font-size: 10px;
+  color: var(--green-lt); z-index: 250; pointer-events: none; white-space: nowrap;
+  opacity: 0; transition: opacity .2s, transform .2s;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+}
+#auto-end-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#net-lock {
+  position: fixed; bottom: 220px; left: 50%; transform: translateX(-50%);
+  background: var(--s1); border: 1px solid var(--border); border-radius: 20px;
+  padding: 7px 16px; font-family: var(--font-mono); font-size: 10px;
+  color: var(--tx-md); display: none; z-index: 200; white-space: nowrap;
+}
+#net-lock.show { display: block; }
+
+/* ── Round Track (topbar) ── */
+.rtp {
+  width: 20px; height: 20px; border-radius: 4px;
+  border: 1px solid var(--border); background: var(--s3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  color: var(--tx-lo); transition: all var(--t-fast); cursor: default;
+}
+.rtp.cur  { border-color: var(--indigo); color: var(--indigo); background: rgba(99,102,241,.12); }
+.rtp.done { background: transparent; }
+
+/* ═══════════════════════════════════════════
+   CORPORATE DOMINION v7 — MOBILE & TABLET
+   ≤640px phone · 641–960px tablet
+═══════════════════════════════════════════ */
+
+/* ── Extra layout pieces needed on desktop too ── */
+
+/* Stock rows in right sidebar */
+.stock-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 14px; border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+.sr-left { flex: 1; min-width: 0; }
+.sr-name { font-family: var(--font-mono); font-size: 10px; font-weight: 600; color: var(--tx-hi); }
+.sr-meta { font-family: var(--font-mono); font-size: 8px; color: var(--tx-lo); margin-top: 1px; }
+.sr-owned { font-family: var(--font-mono); font-size: 8px; color: var(--indigo); margin-top: 1px; }
+.sr-btns { display: flex; gap: 4px; flex-shrink: 0; }
+.sab {
+  font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  padding: 3px 8px; border-radius: var(--r3); border: 1px solid;
+  cursor: pointer; transition: all var(--t-fast); letter-spacing: .04em;
+}
+.sab.buy  { border-color: rgba(16,185,129,.4); color: var(--green-lt); background: rgba(16,185,129,.06); }
+.sab.buy:hover:not(:disabled)  { background: rgba(16,185,129,.16); }
+.sab.sell { border-color: rgba(244,63,94,.4); color: var(--red-lt); background: rgba(244,63,94,.06); }
+.sab.sell:hover:not(:disabled) { background: rgba(244,63,94,.16); }
+.sab:disabled { opacity: .28; cursor: not-allowed; }
+
+/* NW track in player entries */
+.nw-track { height: 3px; background: var(--s4); border-radius: 2px; margin: 4px 0 3px; overflow: hidden; }
+.nw-fill  { height: 100%; border-radius: 2px; transition: width var(--t-med); }
+.ap-row   { display: flex; gap: 3px; margin-top: 2px; }
+.ap-dot   { border-radius: 50%; transition: all .15s; }
+.pe-nums  { display: flex; justify-content: space-between; align-items: flex-end; padding-left: 8px; }
+
+/* AI overlay on board */
+.ai-overlay-global {
+  position: absolute; inset: 0; display: none;
+  align-items: center; justify-content: center;
+  z-index: 30; border-radius: var(--r); pointer-events: none;
+  backdrop-filter: blur(2px);
+}
+.ai-overlay-global.show { display: flex; }
+
+/* ════════════════════════════════════════
+   TABLET  641–960px
+════════════════════════════════════════ */
+@media (min-width: 641px) and (max-width: 960px) {
+  #left  { width: 200px; }
+  #right { width: 190px; }
+  #board { grid-template-columns: repeat(2, 1fr); }
+  .region-col:nth-child(2) { border-right: none; }
+  .region-col:nth-child(3) { border-right: 1px solid var(--border); border-top: 1px solid var(--border); }
+  .region-col:nth-child(4) { border-top: 1px solid var(--border); border-right: none; }
+  #action-dock { bottom: 10px; }
+  #board { padding-bottom: 180px; }
+  .cc { min-height: 80px; }
+}
+
+/* ════════════════════════════════════════
+   PHONE  ≤640px
+════════════════════════════════════════ */
+@media (max-width: 640px) {
+
+  /* ── Topbar: slim ── */
+  #topbar { height: 44px; padding: 0 10px; gap: 6px; }
+  .logo-icon { width: 26px; height: 26px; font-size: 9px; }
+  .logo-title { font-size: 10px; letter-spacing: .02em; }
+  .logo-sub { font-size: 8px; }
+  #market-status { display: none; }
+
+  /* ── Player strip: visible ── */
+  #player-strip { display: flex; }
+
+  /* ── Left sidebar: slide-in drawer ── */
+  #left {
+    position: fixed; left: 0; top: 0; bottom: 0; z-index: 300;
+    width: 240px; transform: translateX(-100%);
+    transition: transform var(--t-med), box-shadow var(--t-med);
+    padding-top: 44px; /* under topbar */
+  }
+  #left.drawer-open {
+    transform: translateX(0);
+    box-shadow: 8px 0 32px rgba(0,0,0,.7);
+  }
+
+  /* ── Right sidebar: hidden — intel/stocks in modal or accessible via dock ── */
+  #right { display: none; }
+
+  /* ── Board: 2×2 grid (4 regions, 2 cols) ── */
+  #board {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 0; padding-bottom: 200px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .region-col { border-bottom: 1px solid var(--border); }
+  .region-col:nth-child(1), .region-col:nth-child(3) { border-right: 1px solid var(--border); }
+  .region-col:nth-child(3), .region-col:nth-child(4) { border-bottom: none; }
+
+  /* Region header compact */
+  .reg-hdr { padding: 7px 8px 5px; gap: 4px; }
+  .reg-icon { font-size: 11px; }
+  .reg-name { font-size: 7px; letter-spacing: .06em; }
+  .reg-ctrl { font-size: 6px; padding: 1px 4px; }
+  .reg-companies { padding: 5px; gap: 5px; }
+
+  /* Company cards: more compact, still tappable */
+  .cc { min-height: 74px; padding: 8px 8px 10px; border-radius: 7px; }
+  .co-name { font-size: 11px; }
+  .co-rev-val { font-size: 13px; }
+  .co-rev-lbl { font-size: 7px; }
+  .co-meta { gap: 3px; }
+  .co-lv { font-size: 7px; }
+  .co-trait { font-size: 6px; padding: 1px 3px; }
+  .co-owner-badge { width: 16px; height: 16px; font-size: 7px; }
+  .acq-cost { font-size: 7px; padding: 1px 4px; }
+
+  /* ── Action dock: full-width bottom ── */
+  #action-dock {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    transform: none; width: 100%; max-width: 100%;
+    padding: 8px 8px 12px;
+    background: rgba(9,9,11,.96);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    flex-direction: column; gap: 6px;
+    border-radius: 0;
+  }
+  #actions-pill { font-size: 8px; padding: 4px 12px; }
+  #dock-btns {
+    display: grid; grid-template-columns: repeat(6, 1fr);
+    gap: 4px; padding: 0; background: none; border: none;
+    border-radius: 0;
+  }
+  .dock-btn {
+    width: 100%; height: 54px; border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--s2);
+  }
+  .dock-btn.active { border-color: var(--indigo); background: rgba(99,102,241,.1); }
+  .dock-icon { font-size: 14px; }
+  .dock-lbl  { font-size: 6px; letter-spacing: .03em; }
+  .dock-num  { top: -5px; right: -5px; width: 13px; height: 13px; font-size: 7px; }
+  .end-turn-btn {
+    width: 100%; padding: 9px; font-size: 12px;
+  }
+
+  /* ── Info strip ── */
+  #info-strip { font-size: 8px; padding: 4px 10px; min-height: 22px; }
+
+  /* ── Modals ── */
+  #modal { max-width: 100%; border-radius: var(--r) var(--r) 0 0; }
+  #modal-overlay { align-items: flex-end; padding: 0; }
+
+  /* ── Tutorial card ── */
+  .tut-card { width: calc(100vw - 24px); left: 12px !important; }
+
+  /* ── Toast higher up ── */
+  #auto-end-toast { bottom: 230px; }
+  #net-lock { bottom: 230px; }
+}
+
+@media (max-width: 640px) {
+  #round-track { display: none !important; }
+}
+
+
+
+/* ── iOS touch fixes ── */
+* { -webkit-tap-highlight-color: transparent; }
+button, [onclick], .setup-tab, .mode-card, .dock-btn, .tcard, .cc, .mbtn, .sab {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     SETUP SCREEN
+══════════════════════════════════════════ -->
+<div id="setup-overlay">
+  <div class="setup-box">
+    <div class="setup-logo">
+      <div class="setup-logo-icon">CD</div>
+      <div>
+        <div class="setup-logo-title">Corporate Dominion</div>
+        <div class="setup-logo-sub">BUILD AN EMPIRE · CRUSH YOUR RIVALS</div>
+      </div>
+    </div>
+
+    <div class="setup-tabs">
+      <div class="setup-tab active" id="stab-solo"   onclick="setupTab('solo')">🤖 vs AI</div>
+      <div class="setup-tab"        id="stab-online" onclick="setupTab('online')">🌐 Online</div>
+    </div>
+
+    <!-- SOLO PANE -->
+    <div class="setup-pane active" id="spane-solo">
+      <div class="setup-sect">Game Mode</div>
+      <div class="mode-grid">
+        <div class="mode-card sel" id="mode-1v1" onclick="selectMode(1)">
+          <div class="mc-icon">⚔️</div>
+          <div class="mc-title">1 vs 1</div>
+          <div class="mc-desc">You vs 1 AI rival.<br>Fast &amp; intense.</div>
+        </div>
+        <div class="mode-card" id="mode-1v3" onclick="selectMode(3)">
+          <div class="mc-icon">🏆</div>
+          <div class="mc-title">1 vs 3</div>
+          <div class="mc-desc">Full 4-player chaos.<br>Classic mode.</div>
+        </div>
+      </div>
+      <div class="setup-sect">Your Startup Bonus</div>
+      <div class="bonus-list" id="bonus-preview"></div>
+      <div class="tut-row">
+        <input type="checkbox" id="tut-check" checked>
+        <label for="tut-check">Show interactive tutorial</label>
+      </div>
+      <button class="start-btn" onclick="startGame()">▶ Begin Game</button>
+    </div>
+
+    <!-- ONLINE PANE -->
+    <div class="setup-pane" id="spane-online">
+      <div class="setup-sect">Create or join a room — up to 4 players</div>
+      <div class="mode-grid">
+        <div class="mode-card sel" id="mp-host-card" onclick="mpSelectRole('host')">
+          <div class="mc-icon">👑</div>
+          <div class="mc-title">Host Room</div>
+          <div class="mc-desc">Create a room &amp;<br>share the code.</div>
+        </div>
+        <div class="mode-card" id="mp-join-card" onclick="mpSelectRole('join')">
+          <div class="mc-icon">🔗</div>
+          <div class="mc-title">Join Room</div>
+          <div class="mc-desc">Enter a 6-letter<br>room code.</div>
+        </div>
+      </div>
+      <div id="mp-join-row" class="join-row" style="display:none">
+        <input class="room-input" id="mp-code-input" maxlength="6" placeholder="ROOM CODE"
+               oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+      </div>
+      <div class="tut-row">
+        <input type="checkbox" id="tut-check-mp" checked>
+        <label for="tut-check-mp">Show tutorial</label>
+      </div>
+      <button class="start-btn" onclick="mpConnect()">🌐 Connect to Room</button>
+      <div class="setup-note">
+        Peer-to-peer WebRTC via PeerJS · Deploy index.html + game.css + game.js to
+        Netlify or GitHub Pages and share the URL. Unfilled slots become AI opponents.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOBBY -->
+<div id="lobby-overlay">
+  <div class="lobby-box">
+    <div class="lobby-title" id="lobby-title">Game Lobby</div>
+    <div class="lobby-sub"   id="lobby-sub">Waiting for players…</div>
+    <div class="room-code-block" id="lobby-code-block">
+      <div class="room-code-lbl">Room Code — share with friends</div>
+      <div class="room-code-val" id="lobby-code" onclick="mpCopyCode()" title="Click to copy">——</div>
+      <div class="room-code-hint">Tap to copy · Friends enter this in Join Room</div>
+    </div>
+    <div class="lobby-slots" id="lobby-slots"></div>
+    <div class="lobby-status">
+      <div class="lobby-dot connecting" id="lobby-dot"></div>
+      <span id="lobby-status-txt">Initialising…</span>
+    </div>
+    <div class="lobby-btns">
+      <button class="lobby-btn pri"   id="lobby-start-btn" onclick="mpStartGame()" disabled>▶ Start Game</button>
+      <button class="lobby-btn ghost" onclick="mpLeaveLobby()">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     GAME SHELL
+══════════════════════════════════════════ -->
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div id="logo">
+    <div class="logo-icon">CD</div>
+    <div class="logo-text-wrap">
+      <div class="logo-title">CORPORATE DOMINION</div>
+      <div class="logo-sub" id="logo-sub">ROUND 1/6 · 3 ACTIONS</div>
+    </div>
+  </div>
+  <div id="market-status">
+    MARKET: <span id="phase-label">STABLE</span>
+  </div>
+  <div id="round-track" style="display:flex;gap:4px;align-items:center;flex-shrink:0"></div>
+  <div class="topbar-right">
+    <button class="icon-btn" onclick="toggleLeft()"    title="Players">☰</button>
+    <button class="icon-btn" id="snd-btn" onclick="showSoundMenu()" title="Sound">🔊</button>
+    <button class="icon-btn" onclick="showRulebook()"  title="Rules">?</button>
+  </div>
+</div>
+
+<!-- PLAYER STRIP (mobile — filled by renderPlayerHUD) -->
+<div id="player-strip"></div>
+
+<!-- MAIN LAYOUT -->
+<div id="main">
+
+  <!-- LEFT: Players + Log -->
+  <div id="left">
+    <div class="sidebar-hdr">
+      <span class="sidebar-hdr-icon">👥</span> PLAYERS
+      <span class="sidebar-count" id="player-count">4/4</span>
+    </div>
+    <div id="player-list"></div>
+    <div class="sidebar-hdr log-hdr">
+      <span class="sidebar-hdr-icon">📋</span> SYSTEM LOG
+    </div>
+    <div id="log-wrap"><div id="log-area"></div></div>
+  </div>
+
+  <!-- CENTER: Board + Action Dock -->
+  <div id="center">
+    <div id="info-strip">Select an action, then tap a company.</div>
+    <div id="event-bar"></div>
+    <div id="board">
+      <!-- Regions injected by renderMap() -->
+    </div>
+
+    <!-- Floating Action Dock -->
+    <div id="action-dock">
+      <div id="actions-pill">
+        <span class="ap-bolt">⚡</span>
+        <span id="ap-count">3</span> ACTIONS REMAINING
+      </div>
+      <div id="dock-btns">
+        <button class="dock-btn" id="btn-acquire"  onclick="setAction('acquire')">
+          <div class="dock-num">1</div>
+          <div class="dock-icon">$</div>
+          <div class="dock-lbl">ACQUIRE</div>
+        </button>
+        <button class="dock-btn" id="btn-upgrade"  onclick="setAction('upgrade')">
+          <div class="dock-num">2</div>
+          <div class="dock-icon">⬆</div>
+          <div class="dock-lbl">UPGRADE</div>
+        </button>
+        <button class="dock-btn" id="btn-takeover" onclick="setAction('takeover')">
+          <div class="dock-num">3</div>
+          <div class="dock-icon">⚔</div>
+          <div class="dock-lbl">TAKEOVER</div>
+        </button>
+        <button class="dock-btn" id="btn-card"     onclick="showCardMenu()">
+          <div class="dock-num">4</div>
+          <div class="dock-icon">🃏</div>
+          <div class="dock-lbl">CARD</div>
+        </button>
+        <button class="dock-btn" id="btn-sell"     onclick="setAction('sell')">
+          <div class="dock-num">S</div>
+          <div class="dock-icon">📈</div>
+          <div class="dock-lbl">SELL</div>
+        </button>
+        <button class="dock-btn" id="btn-pass"     onclick="passAction()">
+          <div class="dock-num">P</div>
+          <div class="dock-icon">⊘</div>
+          <div class="dock-lbl">PASS</div>
+        </button>
+      </div>
+      <button class="end-turn-btn" id="end-turn-btn" onclick="endTurn()">End Turn ›</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: CEO + Intel + Stocks + Cards -->
+  <div id="right">
+    <div class="sidebar-hdr">
+      <span class="sidebar-hdr-icon">👤</span> EXECUTIVE PROFILE
+    </div>
+    <div id="ceo-disp"></div>
+
+    <div class="sidebar-hdr">
+      <span class="sidebar-hdr-icon">📡</span> INTEL &amp; MARKETS
+    </div>
+    <div id="intel-area"></div>
+
+    <div class="sidebar-hdr hand-hdr">
+      <span class="sidebar-hdr-icon">🃏</span> HAND
+      <span id="hand-count" class="hand-badge">2</span>
+    </div>
+    <div id="cards-area"></div>
+  </div>
+
+</div><!-- /#main -->
+
+<!-- ══════════════════════════════════════════
+     OVERLAYS
+══════════════════════════════════════════ -->
+
+<!-- Modal -->
+<div id="modal-overlay">
+  <div id="modal">
+    <div class="modal-hdr">
+      <h2 id="modal-title"></h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- Dice / Takeover resolve -->
+<div id="dice-overlay">
+  <div class="dice-box">
+    <div class="dice-title">⚔ HOSTILE TAKEOVER</div>
+    <div class="dice-target" id="dice-target"></div>
+    <div class="dice-need"   id="dice-need"></div>
+    <div class="dice-num"    id="dice-num">0.000</div>
+    <div class="dice-result" id="dice-result"></div>
+  </div>
+</div>
+
+<!-- Phase Announce -->
+<div id="phase-announce">
+  <div class="pa-inner">
+    <div class="pa-round">ROUND <span id="pa-round">1</span></div>
+    <div class="pa-phase" id="pa-name">STABLE</div>
+    <div class="pa-effect" id="pa-effect"></div>
+    <div class="pa-event"  id="pa-event"></div>
+    <div class="pa-progress"><div class="pa-pfill" id="pa-pfill"></div></div>
+    <button class="pa-dismiss" onclick="dismissPhase()">Understood ›</button>
+  </div>
+</div>
+
+<!-- Tutorial -->
+<div id="tut-overlay">
+  <div id="tut-spot"></div>
+  <div class="tut-card" id="tut-card">
+    <div class="tut-meta">
+      <span id="tut-step">Step 1</span>
+      <div id="tut-dots"></div>
+    </div>
+    <div class="tut-title" id="tut-title"></div>
+    <div class="tut-body"  id="tut-body"></div>
+    <div class="tut-nav">
+      <button class="tut-btn ghost" id="tut-prev" onclick="tutNav(-1)">‹ Back</button>
+      <button class="tut-btn pri"   id="tut-next" onclick="tutNav(1)">Next ›</button>
+    </div>
+  </div>
+  <button class="tut-skip" onclick="skipTutorial()">Skip tutorial</button>
+</div>
+
+<!-- AI thinking overlay (inside board) -->
+<div id="ai-overlay" class="ai-overlay-global">
+  <div class="ai-lbl" id="ai-lbl">AI THINKING…</div>
+</div>
+
+<!-- Auto-end + Net lock toasts -->
+<div id="auto-end-toast">✓ All actions used — ending turn…</div>
+<div id="net-lock">⏳ Waiting for <span id="net-lock-name">opponent</span>…</div>
+
+<!-- PeerJS + Game -->
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+'use strict';
+
+/* ── DIAGNOSTIC ERROR HANDLER ── */
+window.onerror = function(msg, src, line, col, err) {
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#1a0000;color:#ff6b6b;'+
+    'font-family:monospace;font-size:13px;padding:20px;overflow:auto;white-space:pre-wrap;';
+  div.textContent = 'JavaScript Error:\n' + msg + '\nLine: ' + line + '\nFile: ' + src + 
+    '\n\n' + (err ? err.stack : '');
+  document.body.appendChild(div);
+  return true;
+};
+window.addEventListener('unhandledrejection', function(e) {
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99999;background:#1a0000;'+
+    'color:#ff6b6b;font-family:monospace;font-size:12px;padding:10px;';
+  div.textContent = 'Unhandled Promise Error: ' + (e.reason?.message || e.reason);
+  document.body.appendChild(div);
+});
+/* ═══════════════════════════════════════════════════════════
+   CORPORATE DOMINION v7 — game.js
+   Combined: constants · sound · game · render · multiplayer · main
+   Deployment: index.html + game.css + game.js
+   Online play: host on any static server (Netlify / GitHub Pages)
+   WebRTC peer-to-peer via PeerJS — no backend required
+═══════════════════════════════════════════════════════════ */
+
+
+/* ──────────────────── CONSTANTS ──────────────────── */
+
+const PLAYER_DEFS = [
+  { id:0, name:'YOU',    color:'#6366f1', isHuman:true,  style:'human'       },
+  { id:1, name:'NEXUS',  color:'#f43f5e', isHuman:false, style:'aggressive'  },
+  { id:2, name:'AXIOM',  color:'#10b981', isHuman:false, style:'builder'     },
+  { id:3, name:'VORTEX', color:'#f59e0b', isHuman:false, style:'opportunist' },
+];
+const CEO_TYPES = [
+  { type:'Aggressive Raider',    bonus:'+4 attack',         attackBonus:4, defenseBonus:0, stockBonus:0 },
+  { type:'Infrastructure Mogul', bonus:'+5 defense / co',   attackBonus:0, defenseBonus:5, stockBonus:0 },
+  { type:'Financial Architect',  bonus:'−3 on stock buys',  attackBonus:0, defenseBonus:0, stockBonus:3 },
+  { type:'Corp Opportunist',     bonus:'+2 attack, +2 def', attackBonus:2, defenseBonus:2, stockBonus:0 },
+];
+const TACTICS_POOL = [
+  { name:'Emergency Funding', icon:'💰', effect:'+$50 cash',             action: p => { p.cash += 50; SFX.card(); glog(`${p.name}: Emergency Funding +$50`, 'good'); } },
+  { name:'Iron Fortress',     icon:'🛡', effect:'Block next takeover',    action: p => { p.fortified = true; SFX.card(); glog(`${p.name}: Iron Fortress active!`, 'info'); } },
+  { name:'Market Crash',      icon:'📉', effect:'All stocks −3',          action: p => { GS.sectors.forEach(s => s.price = Math.max(5, s.price-3)); SFX.card(); glog(`${p.name}: Market Crash!`, 'warn'); renderStocks(); } },
+  { name:'Hostile Intel',     icon:'🔍', effect:'Cut rival 1 action',     action: p => { const ai = GS.players.filter(x=>!x.isHuman&&x.id!==p.id)[0]; if(ai){ ai.actionsLeft=Math.max(0,ai.actionsLeft-1); glog(`${p.name}: Hostile Intel on ${ai.name}!`,'warn'); } SFX.card(); } },
+  { name:'Headhunt',          icon:'⬆', effect:'Free upgrade on best co', action: p => { const c = GS.companies.filter(x=>x.ownerId===p.id).sort((a,b)=>b.revenue-a.revenue)[0]; if(c){ applyUpgrade(c,true); glog(`${p.name}: Headhunt — ${c.name} upgraded!`,'good'); } SFX.card(); } },
+  { name:'Leveraged Buyout',  icon:'🏢', effect:'Acquire cheapest co free',action: p => { const c = GS.companies.filter(x=>x.ownerId===null).sort((a,b)=>a.baseValue-b.baseValue)[0]; if(c){ c.ownerId=p.id; updateRegionControl(); updateStockPrices(); glog(`${p.name}: LBO — ${c.name}!`,'good'); render(); } SFX.card(); } },
+  { name:'Market Pump',       icon:'📈', effect:'Your sectors +4 price',  action: p => { const sids=new Set(GS.companies.filter(c=>c.ownerId===p.id).map(c=>c.sectorId)); sids.forEach(sid=>{ GS.sectors[sid].price=Math.min(25,GS.sectors[sid].price+4); }); SFX.card(); glog(`${p.name}: Market Pump!`,'good'); renderStocks(); } },
+  { name:'Espionage',         icon:'🕵', effect:'Steal $40 from leader',  action: p => { const lead=GS.players.filter(x=>x.id!==p.id).sort((a,b)=>calcNW(b)-calcNW(a))[0]; const amt=Math.min(40,lead.cash); lead.cash-=amt; p.cash+=amt; SFX.card(); glog(`${p.name}: Stole $${amt} from ${lead.name}!`,'warn'); } },
+];
+const GLOBAL_EVENTS = [
+  { name:'TECH SURGE',    icon:'💻', effect:'Tech sector +5',                      apply: () => { const s=GS.sectors.find(x=>x.name==='Tech'); if(s) s.price=Math.min(25,s.price+5); } },
+  { name:'LABOR STRIKE',  icon:'✊', effect:'Random player −30% rev this round',   apply: () => { const p=GS.players[Math.floor(Math.random()*GS.players.length)]; p._revPenalty=0.70; glog(`${p.name}: Labor Strike!`,'warn'); } },
+  { name:'MARKET BUBBLE', icon:'🫧', effect:'All stocks +4',                       apply: () => { GS.sectors.forEach(s=>{ s._bubble=s.price; s.price=Math.min(25,s.price+4); }); } },
+  { name:'INTEREST CUT',  icon:'🏦', effect:'All players +$20 cash',               apply: () => { GS.players.forEach(p=>p.cash+=20); glog('Interest Rate Cut — everyone +$20!','good'); } },
+  { name:'CYBER ATTACK',  icon:'💀', effect:'Random player loses $30',             apply: () => { const p=GS.players[Math.floor(Math.random()*GS.players.length)]; const l=Math.min(30,p.cash); p.cash-=l; glog(`${p.name}: Cyber Attack −$${l}!`,'bad'); } },
+  { name:'BULL RUN',      icon:'🐂', effect:'All stocks +2',                       apply: () => { GS.sectors.forEach(s=>s.price=Math.min(25,s.price+2)); } },
+  { name:'ANTITRUST',     icon:'⚖',  effect:'Market leader cannot takeover',       apply: () => { const lead=GS.players.slice().sort((a,b)=>calcNW(b)-calcNW(a))[0]; lead._noTakeover=true; glog(`Antitrust probe locks ${lead.name}!`,'warn'); } },
+  { name:'PHARMA BOOM',   icon:'💊', effect:'Pharma sector +6',                    apply: () => { const s=GS.sectors.find(x=>x.name==='Pharma'); if(s) s.price=Math.min(25,s.price+6); } },
+];
+const COMPANY_TRAITS = [
+  { name:'Hi-Grow',  color:'#10b981', desc:'Rev +50%',  apply: c => { c.initRevenue=Math.floor(c.initRevenue*1.5); c.revenue=c.initRevenue; } },
+  { name:'Fortress', color:'#60a5fa', desc:'+3 def',    apply: c => { c._traitDef=3; } },
+  { name:'BlueChip', color:'#f59e0b', desc:'Val +$20',  apply: c => { c.baseValue+=20; } },
+  { name:'Volatile', color:'#fb923c', desc:'Rev ±30%',  apply: c => { c.volatile=true; } },
+];
+const STARTUP_BONUSES = [
+  { name:'Seed Funding',    icon:'💰', desc:'+$45 starting cash',          apply: p => { p.cash += 45; } },
+  { name:'Early Mover',     icon:'🏃', desc:'Start with a free company',   apply: p => { const c=GS.companies.filter(x=>x.ownerId===null).sort((a,b)=>a.baseValue-b.baseValue)[0]; if(c) c.ownerId=p.id; } },
+  { name:'Stock Portfolio', icon:'📈', desc:'1 share in Tech & Finance',   apply: p => { [0,1].forEach(i=>{ if(GS.sectors[i].sharesLeft>0){ p.stocks[i]=(p.stocks[i]||0)+1; GS.sectors[i].sharesLeft--; } }); } },
+  { name:'War Chest',       icon:'⚔', desc:'+$50 cash & +2 attack power', apply: p => { p.cash+=50; p.ceo={...p.ceo,attackBonus:p.ceo.attackBonus+2}; } },
+  { name:'Insider',         icon:'🛡', desc:'Iron Fortress pre-activated', apply: p => { p.fortified=true; } },
+];
+const SECTORS = [
+  { name:'Tech',    gm:1.8 }, { name:'Finance', gm:1.5 }, { name:'Energy',  gm:1.2 },
+  { name:'Pharma',  gm:1.6 }, { name:'Defense', gm:1.3 },
+];
+const REGIONS = [
+  { name:'SILICON VALLEY', icon:'⚡', pool:['ByteForge','NeuraNet','QuantumOS','DataVault','CoreAI','NexusTech'],     rc:'r0' },
+  { name:'WALL STREET',    icon:'📈', pool:['GoldBridge','AssetPrime','NexusFund','AlphaVault','TradeCo','CapitalX'],  rc:'r1' },
+  { name:'ENERGY HUB',     icon:'🔋', pool:['SolarCore','FusionTec','GridMax','OilDelta','WindPeak','AtomCo'],          rc:'r2' },
+  { name:'BIOMEDICAL',     icon:'🧬', pool:['GenoCure','VitaLab','NanoMed','CureCore','BioNex','PharmaOne'],            rc:'r3' },
+];
+const PHASES = [
+  { name:'BOOM',      color:'#10b981', revMult:1.5,  toMod:-.12, stockMod: 3, effect:'Revenue +50% · Stocks +3 · Takeovers harder'  },
+  { name:'STABLE',    color:'#60a5fa', revMult:1.0,  toMod:  0,  stockMod: 0, effect:'Standard market conditions'                   },
+  { name:'RECESSION', color:'#fb923c', revMult:0.7,  toMod: .12, stockMod:-3, effect:'Revenue −30% · Stocks −3 · Takeovers easier'  },
+  { name:'CRASH',     color:'#f43f5e', revMult:0.4,  toMod: .22, stockMod:-5, effect:'Revenue −60% · Stocks −5 · Maximum chaos'     },
+];
+const GS = {
+  round:1, maxRounds:6, phase:null, phaseIdx:1, lastPhaseIdx:1,
+  currentPlayerIdx:0, players:[], companies:[], sectors:[], regions:[],
+  selectedAction:null, lastHoveredTak:null, gameOver:false, numAI:3,
+  currentEvent:null, _skipNextEvent:false, roundPhasesIdx:[],
+  stats:{ toa:[], tos:[], rev:[], peak:[] },
+};
+const MP = {
+  active:   false,
+  isHost:   false,
+  role:     'solo',
+  peer:     null,
+  conns:    {},
+  hostConn: null,
+  roomCode: '',
+  localSlot: 0,
+  slots: [
+    { name:'YOU',    filled:true,  ready:false, peerId:null, isLocal:true  },
+    { name:'—',      filled:false, ready:false, peerId:null, isLocal:false },
+    { name:'—',      filled:false, ready:false, peerId:null, isLocal:false },
+    { name:'—',      filled:false, ready:false, peerId:null, isLocal:false },
+  ],
+  playerName: 'Player',
+  numHumans:  1,
+  tutCheck:   true,
+};
+let selectedMode   = 1;
+let startupBonuses = [];
+
+
+/* ──────────────────── SOUND ──────────────────── */
+
+/* ═══════════════════════════════════════════
+   SOUND ENGINE v3 — three modes: Normal | Headphone | Off
+═══════════════════════════════════════════ */
+const SND = { on: true, mode: 'normal', vol: 0.20 };
+let _actx = null;
+function getACtx() {
+  if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+  return _actx;
+}
+function playNote(freq, type, dur, vol, delay=0, attack=0.015, release=0.12, harmonic=0) {
+  if (!SND.on) return;
+  try {
+    const ctx = getACtx(), now = ctx.currentTime + delay;
+    const peak = vol * SND.vol * (SND.mode === 'headphone' ? 0.55 : 1.0);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, now);
+    env.gain.linearRampToValueAtTime(peak, now + attack);
+    env.gain.setValueAtTime(peak, now + attack + 0.01);
+    env.gain.exponentialRampToValueAtTime(peak * 0.6, now + dur * 0.5);
+    env.gain.exponentialRampToValueAtTime(0.0001, now + dur + release);
+    const osc = ctx.createOscillator();
+    osc.type = type; osc.frequency.setValueAtTime(freq, now);
+    osc.connect(env); osc.start(now); osc.stop(now + dur + release + 0.05);
+    if (harmonic > 0) {
+      const osc2 = ctx.createOscillator(), env2 = ctx.createGain();
+      osc2.type = 'sine'; osc2.frequency.setValueAtTime(freq * harmonic, now);
+      env2.gain.setValueAtTime(0, now);
+      env2.gain.linearRampToValueAtTime(peak * 0.28, now + attack);
+      env2.gain.exponentialRampToValueAtTime(0.0001, now + dur + release);
+      osc2.connect(env2); env2.connect(env); osc2.start(now); osc2.stop(now + dur + release + 0.05);
+    }
+    if (SND.mode === 'headphone') {
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400; lp.Q.value = 0.8;
+      const dl = ctx.createDelay(0.08), dr = ctx.createDelay(0.08);
+      dl.delayTime.value = 0.022; dr.delayTime.value = 0.034;
+      const dg = ctx.createGain(); dg.gain.value = 0.18;
+      const mg = ctx.createChannelMerger(2);
+      env.connect(lp); lp.connect(dl); lp.connect(dr);
+      dl.connect(mg,0,0); dr.connect(mg,0,1); mg.connect(dg); dg.connect(ctx.destination);
+      lp.connect(ctx.destination);
+    } else { env.connect(ctx.destination); }
+  } catch(e) {}
+}
+function chord(freqs, type, dur, vol, delay=0, spread=0.06) {
+  freqs.forEach((f,i) => playNote(f, type, dur, vol*(1-i*0.08), delay+i*spread));
+}
+const SFX = {
+  acquire:      () => { playNote(440,'sine',.18,.42,0,.012,.15,2); playNote(554,'sine',.14,.30,.10,.012,.12); },
+  upgrade:      () => { [330,415,494,587].forEach((f,i)=>playNote(f,'sine',.14,.30,i*.075,.010,.10,1.5)); },
+  levelUp:      () => { chord([523,659,784],'sine',.30,.38,0,.05); playNote(1047,'sine',.28,.28,.22,.012,.20,2); },
+  takeover_ok:  () => { playNote(150,'triangle',.08,.45,0,.005,.06); playNote(440,'sine',.22,.35,.08,.012,.18,2); playNote(880,'sine',.20,.28,.18,.010,.16); },
+  takeover_fail:() => { playNote(200,'triangle',.10,.45,0,.005,.08); playNote(130,'sine',.35,.38,.09,.012,.22); playNote(98,'sine',.40,.28,.22,.010,.28); },
+  buy:          () => { playNote(587,'sine',.12,.30,0,.010,.10,2); playNote(784,'sine',.10,.24,.08,.010,.08); },
+  sell:         () => { playNote(523,'sine',.12,.30,0,.010,.10); playNote(392,'sine',.14,.24,.08,.010,.10); },
+  sellco:       () => { playNote(440,'sine',.14,.30,0,.012,.14,.5); playNote(330,'sine',.18,.24,.10,.012,.16); },
+  card:         () => { [440,554,659,784].forEach((f,i)=>playNote(f,'triangle',.12,.24,i*.045,.008,.10)); },
+  endTurn:      () => { playNote(330,'sine',.12,.22,0,.012,.10); playNote(247,'sine',.20,.18,.12,.012,.16); },
+  phase:        () => { [110,165,220,277].forEach((f,i)=>playNote(f,'sine',.30,.26,i*.12,.015,.20,2)); },
+  event:        () => { playNote(523,'triangle',.07,.24,0,.008,.06); playNote(659,'triangle',.10,.26,.07,.008,.08); },
+  gameOver:     () => { [523,659,784,659,784,1047].forEach((f,i)=>playNote(f,'sine',.26,.32,i*.16,.012,.20,2)); },
+  ui:           () => playNote(800,'sine',.06,.12,0,.005,.05),
+  pass:         () => playNote(330,'sine',.14,.14,0,.010,.10),
+  nope:         () => { playNote(220,'sine',.14,.28,0,.008,.10); playNote(165,'sine',.14,.22,.08,.008,.10); },
+  aiact:        () => playNote(200+Math.random()*100,'sine',.07,.08,0,.008,.05),
+};
+function showSoundMenu() {
+  SFX.ui();
+  showModal('🔊 Sound Settings', `
+    <p style="font-family:var(--font-mono);font-size:10px;color:var(--tx-lo);margin-bottom:12px">
+      Headphone mode applies a low-pass filter + stereo depth — safe for earphones.
+    </p>
+    <div class="snd-modes">
+      <div class="snd-mode ${SND.on&&SND.mode==='normal'?'on':''}"     id="sm-normal"    onclick="setSndMode('normal')">🔊 Normal</div>
+      <div class="snd-mode ${SND.on&&SND.mode==='headphone'?'on':''}"  id="sm-headphone" onclick="setSndMode('headphone')">🎧 Headphone</div>
+      <div class="snd-mode ${!SND.on?'on':''}"                         id="sm-off"       onclick="setSndMode('off')">🔇 Off</div>
+    </div>
+    <div class="vol-row">
+      <div class="vol-lbl">Volume</div>
+      <input type="range" min="0" max="100" value="${Math.round(SND.vol*100)}" oninput="SND.vol=this.value/100">
+    </div>
+    <div class="mbtns">
+      <button class="mbtn pri" onclick="SFX.acquire();SFX.ui()">▶ Preview</button>
+      <button class="mbtn" onclick="closeModal()">Close</button>
+    </div>`);
+}
+function setSndMode(m) {
+  if (m==='off') { SND.on=false; } else { SND.on=true; SND.mode=m; }
+  document.getElementById('snd-btn').textContent = SND.on?(SND.mode==='headphone'?'🎧':'🔊'):'🔇';
+  ['normal','headphone','off'].forEach(id => {
+    const el = document.getElementById('sm-'+id);
+    if (el) el.classList.toggle('on', (id==='off'&&!SND.on)||(SND.on&&SND.mode===id));
+  });
+}
+
+
+/* ──────────────────── GAME ──────────────────── */
+
+/* ═══════════════════════════════════════════
+   CORPORATE DOMINION v7 — GAME LOGIC
+   Setup · Core Math · Actions · AI · Rounds
+═══════════════════════════════════════════ */
+
+/* ── Setup UI ── */
+function selectMode(n) {
+  selectedMode = n;
+  document.getElementById('mode-1v1').classList.toggle('sel', n === 1);
+  document.getElementById('mode-1v3').classList.toggle('sel', n === 3);
+  buildBonusPreview(n + 1);
+  SFX.ui();
+}
+
+function buildBonusPreview(numPlayers) {
+  const pool  = [...STARTUP_BONUSES];
+  startupBonuses = Array.from({ length: numPlayers }, () => {
+    const i = Math.floor(Math.random() * pool.length);
+    return pool.splice(i, 1)[0] || STARTUP_BONUSES[0];
+  });
+  const pDefs = PLAYER_DEFS.slice(0, numPlayers);
+  const el = document.getElementById('bonus-preview');
+  if (!el) return;
+  el.innerHTML = pDefs.map((p, i) => `
+    <div class="bonus-row">
+      <div class="bonus-ico">${startupBonuses[i].icon}</div>
+      <div>
+        <div class="bonus-pnm" style="color:${p.color}">${p.name}</div>
+        <div class="bonus-desc">${startupBonuses[i].name}: <span>${startupBonuses[i].desc}</span></div>
+      </div>
+    </div>`).join('');
+}
+
+function initGameData(numAI) {
+  GS.numAI = numAI;
+  const n   = numAI + 1;
+  GS.stats = { toa:Array(n).fill(0), tos:Array(n).fill(0), rev:Array(n).fill(0), peak:Array(n).fill(0) };
+  GS.players = PLAYER_DEFS.slice(0, n).map((p, i) => ({
+    ...p,
+    cash: 260, actionsLeft: 3, stocks: {},
+    ceo: CEO_TYPES[i % CEO_TYPES.length],
+    tactics: [
+      { ...TACTICS_POOL[i % TACTICS_POOL.length],       used:false },
+      { ...TACTICS_POOL[(i + 2) % TACTICS_POOL.length], used:false },
+    ],
+    fortified: false, _noTakeover: false, _revPenalty: 1,
+  }));
+  GS.sectors = SECTORS.map((s, i) => ({
+    ...s, id:i, sharesLeft: 3+numAI, price: 12, growthScore: 0,
+    demand: 0, priceHistory: [12,12,12], _stablePrice: 12,
+  }));
+  let cid = 0;
+  GS.companies = [];
+  REGIONS.forEach((r, ri) => {
+    const pool = [...r.pool], picked = [];
+    while (picked.length < 2 && pool.length > 0) {
+      picked.push(pool.splice(Math.floor(Math.random()*pool.length), 1)[0]);
+    }
+    picked.forEach(name => {
+      const baseRev = 14 + Math.floor(Math.random() * 13);
+      const c = {
+        id: cid++, name, regionIdx: ri, ownerId: null,
+        level: 1, upgrades: 0, initRevenue: baseRev, revenue: baseRev,
+        baseValue: 32 + Math.floor(Math.random()*18),
+        sectorId: ri % SECTORS.length, failedTakeoversAgainst: 0,
+        volatile: false, _traitDef: 0, _evtDef: 0, trait: null,
+      };
+      if (Math.random() < 0.3) {
+        const t = COMPANY_TRAITS[Math.floor(Math.random()*COMPANY_TRAITS.length)];
+        c.trait = t; t.apply(c);
+      }
+      GS.companies.push(c);
+    });
+  });
+  GS.regions = REGIONS.map(r => ({ name: r.name, controller: null }));
+}
+
+function startGame() {
+  const numAI = selectedMode;
+  initGameData(numAI);
+  setPhase(1);
+  /* Rebuild bonuses for actual player count (fixes bug where only 2 were generated) */
+  buildBonusPreview(numAI + 1);
+  GS.players.forEach((p, i) => startupBonuses[i]?.apply(p));
+  updateRegionControl();
+  updateStockPrices();
+  document.getElementById('setup-overlay').style.display = 'none';
+  render();
+  renderRoundTrack();
+  if (document.getElementById('tut-check').checked) startTutorial();
+  else showPhaseAnnounce();
+  glog(`=== CORPORATE DOMINION — ${numAI===1?'1v1':'1v3'} — ROUND 1 ===`, 'phase');
+}
+
+/* ── Core Math ── */
+function setPhase(idx) { GS.phaseIdx = idx; GS.phase = PHASES[idx]; }
+
+function rollPhase() {
+  const r = GS.round;
+  let w = r<=2 ? [2,5,2,1] : r<=4 ? [2,3,3,2] : [1,2,3,4];
+  const tot = w.reduce((a,b)=>a+b,0);
+  for (let attempt=0; attempt<20; attempt++) {
+    let x = Math.random()*tot;
+    for (let i=0; i<w.length; i++) {
+      x -= w[i];
+      if (x<=0) { if (i===GS.lastPhaseIdx && Math.random()<0.60 && attempt<10) break; setPhase(i); return; }
+    }
+  }
+  setPhase(1);
+}
+
+function updateStockPrices() {
+  GS.sectors.forEach(s => {
+    const owned = GS.companies.filter(c => c.sectorId===s.id && c.ownerId!==null);
+    s.growthScore = owned.reduce((a,c) => a+c.upgrades*2+3-c.failedTakeoversAgainst, 0);
+    s.demand      = owned.length;
+    const raw     = 10 + (s.growthScore*s.gm) + s.demand + GS.phase.stockMod;
+    const stable  = Math.min(25, Math.max(5, Math.round(raw)));
+    s.price = stable; s._stablePrice = stable;
+  });
+}
+
+function updateRegionControl() {
+  GS.regions.forEach((region, ri) => {
+    const counts = {};
+    GS.companies.filter(c=>c.regionIdx===ri&&c.ownerId!==null).forEach(c=>{ counts[c.ownerId]=(counts[c.ownerId]||0)+1; });
+    region.controller = null;
+    Object.entries(counts).forEach(([pid,cnt]) => { if (cnt>=2) region.controller=parseInt(pid); });
+  });
+}
+
+function calcBaseRevenue(p) {
+  let rev=0; const ph=GS.phase, pen=p._revPenalty||1;
+  GS.companies.forEach(c => {
+    if (c.ownerId!==p.id) return;
+    let r = c.revenue*ph.revMult*pen;
+    if (GS.regions[c.regionIdx].controller===p.id) r+=5*ph.revMult;
+    rev += r;
+  });
+  Object.entries(p.stocks).forEach(([sid,qty]) => { const s=GS.sectors[sid]; if(s) rev+=Math.round(s.price/5)*qty; });
+  return Math.floor(rev);
+}
+
+function calcRevenue(p) {
+  let rev=0; const ph=GS.phase, pen=p._revPenalty||1;
+  GS.companies.forEach(c => {
+    if (c.ownerId!==p.id) return;
+    let r = c.revenue*ph.revMult*(0.85+Math.random()*0.30)*pen;
+    if (c.volatile) r *= (0.70+Math.random()*0.60);
+    if (GS.regions[c.regionIdx].controller===p.id) r+=5*ph.revMult;
+    rev += r;
+  });
+  Object.entries(p.stocks).forEach(([sid,qty]) => { const s=GS.sectors[sid]; if(s) rev+=Math.round(s.price/5)*qty; });
+  return Math.floor(rev);
+}
+
+function calcNW(p) {
+  let nw=p.cash;
+  GS.companies.forEach(c => { if(c.ownerId===p.id) nw+=calcCompanyValue(c); });
+  Object.entries(p.stocks).forEach(([sid,qty]) => { const s=GS.sectors[sid]; if(s) nw+=qty*s.price; });
+  return nw;
+}
+
+function calcCompanyValue(c) { return c.baseValue + c.upgrades*22 + c.level*10; }
+function calcSellPrice(c)    { return Math.floor(calcCompanyValue(c)*0.65); }
+
+function calcTakeover(attackerIdx, company) {
+  const att=GS.players[attackerIdx], defIdx=company.ownerId;
+  const def=defIdx!==null?GS.players[defIdx]:null;
+  const A = (att.cash*0.15)+att.ceo.attackBonus+(GS.phase.toMod*60);
+  const regionBonus = (GS.regions[company.regionIdx].controller===defIdx)?6:0;
+  const D = 6+company.level*3+company.upgrades*2+regionBonus+(def?def.ceo.defenseBonus:0)+(company._traitDef||0)+(company._evtDef||0);
+  const P    = Math.max(0.05, Math.min(0.93, A/(A+D)));
+  const cost = Math.floor(company.baseValue*1.20+company.upgrades*14+company.level*10);
+  return { A:Math.round(A), D:Math.round(D), P, cost };
+}
+
+function applyUpgrade(company, free=false) {
+  if (company.ownerId === null || company.ownerId === undefined) return false;
+  const p=GS.players[company.ownerId], cost=free?0:(20+company.upgrades*10);
+  if (!p) return false;
+  if (!free && p.cash<cost) return false;
+  if (!free) p.cash-=cost;
+  company.upgrades++; company.revenue+=4;
+  if (company.upgrades%2===0) {
+    company.level++; SFX.levelUp();
+    glog(`🆙 ${company.name} → Level ${company.level}!`, 'good');
+    document.querySelectorAll(`.cc[data-cid="${company.id}"]`).forEach(el => {
+      el.classList.add('lv-flash'); setTimeout(()=>el.classList.remove('lv-flash'),720);
+    });
+  }
+  return true;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CORPORATE DOMINION v6 — PART 3
+   Human Actions · AI · endRound · Render · Tutorial · Keyboard
+═══════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════
+   TUTORIAL SYSTEM
+   Steps spotlight actual UI elements with tab-switching
+   before getBoundingClientRect so position is correct.
+══════════════════════════════════════════════════════ */
+const TUT_STEPS = [
+  {
+    title: 'Welcome, Executive',
+    body: `You run a corporation competing for market dominance over <b style="color:var(--gold)">6 rounds</b>.\n\nThe goal: build the highest <b style="color:var(--gold)">Net Worth</b>.\n\n<span style="color:var(--tx-lo)">Net Worth = Cash + Company Values + Stock Portfolio</span>`,
+    spotId: null, tab: null,
+  },
+  {
+    title: 'The Company Map',
+    body: `The grid shows all 16 companies across 4 regions.\n\nCompanies you <b style="color:var(--gold)">own</b> have a colored left border. Unowned companies have a plain border.\n\nTap any company card to inspect its stats.`,
+    spotId: 'board', tab: null,
+  },
+  {
+    title: 'Your 3 Actions',
+    body: `Each round you get <b style="color:var(--gold)">3 actions</b>. Choose wisely:\n• <b>Acquire</b> — buy unowned companies\n• <b>Upgrade</b> — improve your companies (+revenue)\n• <b>Takeover</b> — capture rivals\u2019 companies\n• <b>Sell Co</b> — sell a company for quick cash\n• <b>Stocks</b> — invest in market sectors`,
+    spotId: 'action-dock', tab: null,
+  },
+  {
+    title: 'Takeover — Cost Always Shown Upfront',
+    body: `Before committing to a takeover you see the <b style="color:var(--gold)">cost in gold</b> \u2014 charged immediately.\n\nA dice roll decides success.\n<span style="color:var(--green-lt)">Win</span>: company is yours. <span style="color:var(--red-lt)">Fail</span>: lose 50% of cost, 50% returns next round.`,
+    spotId: 'board', tab: null,
+  },
+  {
+    title: 'Sell to Raise Capital',
+    body: `Need cash for a big takeover? <b>Sell a company</b> you don't need for <b>65% of its value</b>.\n\nSell a weak company, then use the cash to take over a much stronger one.`,
+    spotId: 'action-dock', tab: null,
+  },
+  {
+    title: 'Economic Phases',
+    body: `Each round a random phase is revealed:\n<b style="color:var(--green-lt)">BOOM</b> \u2014 Revenue +50%, takeovers harder\n<b>STABLE</b> \u2014 Normal conditions\n<b style="color:var(--amber)">RECESSION</b> \u2014 Revenue \u221230%, easier takeovers\n<b style="color:var(--red-lt)">CRASH</b> \u2014 Revenue \u221260%, high chaos`,
+    spotId: 'phase-label', tab: null,
+  },
+  {
+    title: 'Ready to Trade',
+    body: `Keyboard shortcuts:\n<span class="tut-kbd">1</span> Acquire &nbsp;<span class="tut-kbd">2</span> Upgrade &nbsp;<span class="tut-kbd">3</span> Takeover\n<span class="tut-kbd">S</span> Sell &nbsp;<span class="tut-kbd">4</span> Card &nbsp;<span class="tut-kbd">P</span> Pass &nbsp;<span class="tut-kbd">Space</span> End Turn\n\nOwn <b>both companies</b> in a region for the region control bonus. Good luck.`,
+    spotId: null, tab: null,
+  },
+];
+let tutIdx = 0;
+
+/* ── switchTab stub (new layout has no tab panels ── */
+function switchTab(name) { /* no-op in v7 layout */ }
+
+function startTutorial() {
+  tutIdx = 0;
+  document.getElementById('tut-overlay').classList.add('show');
+  renderTutStep();
+}
+
+function renderTutStep() {
+  const s = TUT_STEPS[tutIdx];
+  /* FIX #5: switch to the correct tab BEFORE measuring element bounds */
+  if (s.tab) switchTab(s.tab);
+
+  document.getElementById('tut-step').textContent  = `Step ${tutIdx + 1} of ${TUT_STEPS.length}`;
+  document.getElementById('tut-title').textContent = s.title;
+  document.getElementById('tut-body').innerHTML    = s.body.replace(/\n/g, '<br>');
+  document.getElementById('tut-dots').innerHTML    = TUT_STEPS.map((_, i) =>
+    `<div class="tut-dot${i === tutIdx ? ' on' : ''}"></div>`).join('');
+  document.getElementById('tut-prev').style.visibility = tutIdx === 0 ? 'hidden' : 'visible';
+  document.getElementById('tut-next').textContent =
+    tutIdx === TUT_STEPS.length - 1 ? 'Start Game ▶' : 'Next ›';
+
+  const spot = document.getElementById('tut-spot');
+  const card = document.getElementById('tut-card');
+
+  if (s.spotId) {
+    const el = document.getElementById(s.spotId);
+    if (el) {
+      const r  = el.getBoundingClientRect();
+      spot.style.cssText =
+        `left:${r.left - 5}px;top:${r.top - 5}px;width:${r.width + 10}px;height:${r.height + 10}px;`;
+      const cW = 295, cH = 210;
+      let cx = r.left;
+      let cy = r.bottom + 14;
+      /* Bottom edge clamp */
+      if (cy + cH > window.innerHeight - 8) cy = r.top - cH - 14;
+      /* Right & left edge clamps */
+      cx = Math.max(8, Math.min(window.innerWidth - cW - 8, cx));
+      cy = Math.max(8, cy);
+      card.style.cssText = `left:${cx}px;top:${cy}px;transform:none;`;
+    }
+  } else {
+    spot.style.cssText = 'width:0;height:0;box-shadow:0 0 0 0;border:none;';
+    card.style.cssText = 'left:50%;top:50%;transform:translate(-50%,-50%);';
+  }
+}
+
+function tutNav(dir) {
+  tutIdx += dir;
+  if (tutIdx >= TUT_STEPS.length) { skipTutorial(); return; }
+  if (tutIdx < 0) tutIdx = 0;
+  renderTutStep();
+}
+
+function skipTutorial() {
+  document.getElementById('tut-overlay').classList.remove('show');
+  showPhaseAnnounce();
+}
+
+/* ══════════════════════════════════════════════════════
+   PHASE & EVENTS
+══════════════════════════════════════════════════════ */
+function rollEvent() {
+  if (GS._skipNextEvent) { GS._skipNextEvent = false; GS.currentEvent = null; return; }
+  if (Math.random() < 0.65) {
+    const e = GLOBAL_EVENTS[Math.floor(Math.random() * GLOBAL_EVENTS.length)];
+    GS.currentEvent = e;
+    e.apply();
+    SFX.event();
+    const eb = document.getElementById('event-bar');
+    eb.textContent = `${e.icon}  EVENT: ${e.name} — ${e.effect}`;
+    eb.classList.add('show');
+    setTimeout(() => eb.classList.remove('show'), 9000);
+    glog(`🌐 ${e.name}: ${e.effect}`, 'event');
+  } else {
+    GS.currentEvent = null;
+    document.getElementById('event-bar').classList.remove('show');
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   HUMAN ACTIONS
+══════════════════════════════════════════════════════ */
+function setAction(action) {
+  if (GS.currentPlayerIdx !== 0) return;
+  if (GS.players[0].actionsLeft <= 0) { SFX.nope(); setInfo('❌ No actions remaining.'); return; }
+  GS.selectedAction = action;
+  ['acquire','upgrade','takeover','sell'].forEach(a =>
+    document.getElementById('btn-' + a)?.classList.remove('active'));
+  document.getElementById('btn-' + action)?.classList.add('active');
+  SFX.ui();
+  if (action === 'takeover') switchTab('takeover');
+  else if (action !== 'sell') switchTab('actions');
+  const hints = {
+    acquire:  'Tap a company with NO border (unowned) on the map.',
+    upgrade:  'Tap one of YOUR companies (gold border) on the map.',
+    takeover: 'Tap an ENEMY company on the map — cost shown before you commit.',
+    sell:     'Tap one of YOUR companies to sell it for 65% of its value.',
+  };
+  setInfo(hints[action] || '');
+  renderMap();
+}
+
+function passAction() {
+  if (GS.currentPlayerIdx !== 0) return;
+  const p = GS.players[0];
+  if (p.actionsLeft <= 0) { SFX.nope(); return; }
+  p.actionsLeft--;
+  SFX.pass();
+  glog('YOU: passed action.', 'info');
+  clearAction();
+  render();
+}
+
+function handleCompanyClick(cid) {
+  if (GS.currentPlayerIdx !== 0) return;
+  const p      = GS.players[0];
+  const c      = GS.companies.find(x => x.id === cid);
+  const action = GS.selectedAction;
+
+  /* ── No action selected: show info ── */
+  if (!action) {
+    const owner = c.ownerId !== null ? GS.players[c.ownerId] : null;
+    const val   = calcCompanyValue(c);
+    const tk    = owner && owner.id !== 0 ? calcTakeover(0, c) : null;
+    setInfo(
+      `${c.name}  |  Rev $${c.revenue}  |  Val $${val}  |  Lv${c.level}+${c.upgrades}  |  ` +
+      `${SECTORS[c.sectorId].name}  |  ${owner ? owner.name : 'UNOWNED'}` +
+      (tk ? `  |  TO ${Math.round(tk.P * 100)}% · cost $${tk.cost}` : '')
+    );
+    if (tk) { GS.lastHoveredTak = c; updateTakeoverCalc(c); switchTab('takeover'); }
+    return;
+  }
+
+  if (p.actionsLeft <= 0) { SFX.nope(); setInfo('❌ No actions remaining this round!'); return; }
+
+  /* ── ACQUIRE ── */
+  if (action === 'acquire') {
+    if (c.ownerId !== null) { SFX.nope(); setInfo('❌ This company is owned — use Takeover instead.'); return; }
+    if (p.cash < c.baseValue) { SFX.nope(); setInfo(`❌ Need $${c.baseValue}, you have $${p.cash}.`); return; }
+    const trRow = c.trait ? `<div class="mrow"><div class="ml">Trait</div><div class="mv" style="color:${c.trait.color}">${c.trait.name} — ${c.trait.desc}</div></div>` : '';
+    showModal('Acquire Company', `
+      <div class="mrow"><div class="ml">Company</div><div class="mv">${c.name}</div></div>
+      <div class="mrow"><div class="ml">Region</div><div class="mv">${REGIONS[c.regionIdx].name}</div></div>
+      <div class="mrow"><div class="ml">Sector</div><div class="mv">${SECTORS[c.sectorId].name}</div></div>
+      <div class="mrow"><div class="ml">Revenue / round</div><div class="mv gold">$${c.revenue}</div></div>
+      <div class="mrow"><div class="ml">Base Value</div><div class="mv">$${c.baseValue}</div></div>
+      ${trRow}
+      <div class="cost-block" style="margin:12px 0">
+        <div class="cb-lbl">Acquisition Cost</div>
+        <div class="cb-num">$${c.baseValue}</div>
+        <div class="cb-sub">Charged from your cash immediately</div>
+      </div>
+      <div class="mbtns">
+        <button class="mbtn pri" onclick="doAcquire(${cid})">Acquire ✓</button>
+        <button class="mbtn" onclick="closeModal()">Cancel</button>
+      </div>`);
+  }
+
+  /* ── UPGRADE ── */
+  else if (action === 'upgrade') {
+    if (c.ownerId !== 0) { SFX.nope(); setInfo('❌ You can only upgrade your own companies.'); return; }
+    const cost   = 20 + c.upgrades * 10;
+    const nxtLv  = (c.upgrades + 1) % 2 === 0 ? ` → <span style="color:var(--green-lt)">Level Up!</span>` : '';
+    if (p.cash < cost) { SFX.nope(); setInfo(`❌ Need $${cost}, you have $${p.cash}.`); return; }
+    showModal('Upgrade Company', `
+      <div class="mrow"><div class="ml">Company</div><div class="mv">${c.name}</div></div>
+      <div class="mrow"><div class="ml">Current Level</div><div class="mv green">Lv${c.level} (${c.upgrades} upgrades)</div></div>
+      <div class="mrow"><div class="ml">Effect</div><div class="mv green">+$3 revenue · +2 defense${nxtLv}</div></div>
+      <div class="cost-block" style="margin:12px 0">
+        <div class="cb-lbl">Upgrade Cost</div>
+        <div class="cb-num">$${cost}</div>
+      </div>
+      <div class="mbtns">
+        <button class="mbtn pri" onclick="doUpgrade(${cid})">Upgrade ✓</button>
+        <button class="mbtn" onclick="closeModal()">Cancel</button>
+      </div>`);
+  }
+
+  /* ── TAKEOVER ── */
+  else if (action === 'takeover') {
+    if (c.ownerId === null) { SFX.nope(); setInfo('❌ Use Acquire for unowned companies.'); return; }
+    if (c.ownerId === 0)    { SFX.nope(); setInfo('❌ You already own this company.'); return; }
+    if (p._noTakeover)      { SFX.nope(); setInfo('❌ Antitrust probe: no takeovers this round.'); return; }
+    const tk  = calcTakeover(0, c);
+    const def = GS.players[c.ownerId];
+    if (p.cash < tk.cost) { SFX.nope(); setInfo(`❌ Need $${tk.cost} for this takeover — you have $${p.cash}. Consider selling a company first.`); return; }
+    const pct  = Math.round(tk.P * 100);
+    const bc   = pct > 62 ? 'var(--green-lt)' : pct > 38 ? 'var(--gold-lt)' : 'var(--red-lt)';
+    const risk = pct < 30 ? 'HIGH RISK — likely to fail' : pct < 50 ? 'CONTESTED — coin flip' : pct < 68 ? 'FAVORABLE — good odds' : 'DOMINANT — nearly certain';
+    const fortW = def.fortified
+      ? `<div class="fort-warn">⚠ FORTIFIED — success chance reduced by 15%</div>` : '';
+    GS.lastHoveredTak = c; updateTakeoverCalc(c);
+    showModal('⚔ Hostile Takeover', `
+      <div class="mrow"><div class="ml">Target</div><div class="mv">${c.name}</div></div>
+      <div class="mrow"><div class="ml">Current Owner</div><div class="mv" style="color:${def.color}">${def.name}</div></div>
+      <div class="mrow"><div class="ml">Attack Power (A)</div><div class="mv gold">${tk.A}</div></div>
+      <div class="mrow"><div class="ml">Defense Score (D)</div><div class="mv red">${tk.D}</div></div>
+      <div class="cost-block" style="margin:12px 0">
+        <div class="cb-lbl">⬆ Upfront Cost — charged now</div>
+        <div class="cb-num">$${tk.cost}</div>
+        <div class="cb-sub">
+          <span style="color:var(--green-lt)">WIN</span>: company is yours &nbsp;·&nbsp;
+          <span style="color:var(--red-lt)">FAIL</span>: lose $${Math.floor(tk.cost * .5)}, recover $${Math.ceil(tk.cost * .5)} next round
+        </div>
+      </div>
+      ${fortW}
+      <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--tx-lo);letter-spacing:.1em;text-transform:uppercase;margin:8px 0 4px">Success Probability</div>
+      <div class="prob-bar">
+        <div class="prob-fill" style="width:${pct}%;background:${bc}">${pct}%</div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${bc};margin:4px 0 8px">${risk}</div>
+      <div class="mbtns">
+        <button class="mbtn danger" onclick="doTakeover(${cid},${tk.cost},${tk.P.toFixed(4)})">Launch Takeover</button>
+        <button class="mbtn" onclick="closeModal()">Abort</button>
+      </div>`);
+  }
+
+  /* ── SELL COMPANY ── */
+  else if (action === 'sell') {
+    if (c.ownerId !== 0) { SFX.nope(); setInfo('❌ You can only sell your own companies.'); return; }
+    const sp  = calcSellPrice(c);
+    const fv  = calcCompanyValue(c);
+    showModal('💰 Sell Company', `
+      <div class="mrow"><div class="ml">Company</div><div class="mv">${c.name}</div></div>
+      <div class="mrow"><div class="ml">Full Market Value</div><div class="mv">$${fv}</div></div>
+      <div class="mrow"><div class="ml">Revenue you'll lose</div><div class="mv red">−$${c.revenue}/round</div></div>
+      <div class="cost-block sell-v" style="margin:12px 0">
+        <div class="cb-lbl">You receive (65% of value)</div>
+        <div class="cb-num">$${sp}</div>
+        <div class="cb-sub">Sell a weak company → fund a powerful takeover</div>
+      </div>
+      <div class="mbtns">
+        <button class="mbtn success" onclick="doSell(${cid})">Sell for $${sp}</button>
+        <button class="mbtn" onclick="closeModal()">Cancel</button>
+      </div>`);
+  }
+}
+
+/* ── Action executors ── */
+function doAcquire(cid) {
+  closeModal();
+  const p = GS.players[0]; const c = GS.companies.find(x => x.id === cid);
+  p.cash -= c.baseValue; c.ownerId = 0; p.actionsLeft--;
+  SFX.acquire();
+  glog(`YOU acquired ${c.name} ($${c.baseValue})`, 'good');
+  updateRegionControl(); updateStockPrices(); render(); clearAction();
+}
+
+function doUpgrade(cid) {
+  closeModal();
+  const c = GS.companies.find(x => x.id === cid);
+  if (!applyUpgrade(c)) { glog('Insufficient funds for upgrade.', 'bad'); return; }
+  GS.players[0].actionsLeft--;
+  SFX.upgrade();
+  glog(`YOU upgraded ${c.name} → Lv${c.level} (+${c.upgrades} upgrades)`, 'good');
+  updateStockPrices(); render(); clearAction();
+}
+
+function doSell(cid) {
+  closeModal();
+  const p  = GS.players[0]; const c = GS.companies.find(x => x.id === cid);
+  const sp = calcSellPrice(c);
+  p.cash += sp; p.actionsLeft--;
+  /* FIX #3: reset company to initial state on sell */
+  c.ownerId  = null;
+  c.upgrades = 0;
+  c.level    = 1;
+  c.revenue  = c.initRevenue;   /* restore original revenue */
+  c._traitDef= c.trait ? 3 : 0; /* re-apply trait defense if applicable */
+  SFX.sellco();
+  glog(`YOU sold ${c.name} for $${sp}`, 'warn');
+  updateRegionControl(); updateStockPrices(); render(); clearAction();
+}
+
+function doTakeover(cid, cost, prob) {
+  closeModal();
+  const p   = GS.players[0]; const c = GS.companies.find(x => x.id === cid);
+  const def = GS.players[c.ownerId];
+  if (p.cash < cost) { SFX.nope(); glog(`❌ Need $${cost}, have $${p.cash}.`, 'bad'); return; }
+  p.actionsLeft--;
+  p.cash -= cost;
+  /* Fortification check */
+  const fp   = def.fortified ? 0.15 : 0;
+  if (def.fortified) def.fortified = false;
+  const effP = Math.max(0.05, parseFloat(prob) - fp);
+  GS.stats.toa[p.id]++;
+  runDice(effP, c, def, cost, p);
+  clearAction();
+}
+
+function runDice(effP, c, def, cost, p) {
+  const ov = document.getElementById('dice-overlay');
+  ov.classList.add('show');
+  document.getElementById('dice-target').textContent = `${c.name}  ←  ${def.name}`;
+  document.getElementById('dice-need').textContent   = `Need ≤ ${effP.toFixed(3)} to succeed`;
+  document.getElementById('dice-num').style.color    = 'var(--tx-hi)';
+  document.getElementById('dice-result').textContent = '';
+
+  const finalRoll = Math.random();
+  let ticks = 0;
+  const iv = setInterval(() => {
+    ticks++;
+    const shown = ticks < 24 ? Math.random() : finalRoll;
+    document.getElementById('dice-num').textContent = shown.toFixed(3);
+    if (ticks >= 24) {
+      clearInterval(iv);
+      const ok = finalRoll <= effP;
+      document.getElementById('dice-num').style.color   = ok ? 'var(--green-lt)' : 'var(--red-lt)';
+      document.getElementById('dice-result').textContent = ok ? '✓  SUCCESS' : '✗  FAILED';
+      document.getElementById('dice-result').style.color = ok ? 'var(--green-lt)' : 'var(--red-lt)';
+      ok ? SFX.takeover_ok() : SFX.takeover_fail();
+      setTimeout(() => {
+        ov.classList.remove('show');
+        resolveTakeover(ok, c, def, cost, p, finalRoll, effP);
+      }, 1400);
+    }
+  }, 55);
+}
+
+function resolveTakeover(ok, c, def, cost, p, roll, effP) {
+  if (ok) {
+    c.ownerId = p.id;
+    GS.stats.tos[p.id]++;
+    glog(`🏆 Takeover SUCCESS: ${c.name} from ${def.name}  [${roll.toFixed(3)} ≤ ${effP.toFixed(3)}]`, 'good');
+  } else {
+    const lost = Math.floor(cost * 0.5);
+    const ret  = cost - lost;
+    c.failedTakeoversAgainst++;
+    setTimeout(() => { p.cash += ret; glog(`+$${ret} returned from failed takeover.`, 'info'); render(); }, 1900);
+    glog(`💀 Takeover FAILED: ${c.name}. Lost $${lost} · $${ret} returns next turn.  [roll ${roll.toFixed(3)}]`, 'bad');
+  }
+  updateRegionControl(); updateStockPrices(); render();
+}
+
+/* ── Stock actions ── */
+function doStockBuy(sid) {
+  if (GS.currentPlayerIdx !== 0) return;
+  const p = GS.players[0]; const s = GS.sectors[sid];
+  if (p.actionsLeft <= 0)  { SFX.nope(); setInfo('❌ No actions remaining.'); return; }
+  if (s.sharesLeft <= 0)   { SFX.nope(); setInfo('❌ No shares available.'); return; }
+  const cost = s.price - p.ceo.stockBonus;
+  if (p.cash < cost) { SFX.nope(); setInfo(`❌ Need $${cost}, you have $${p.cash}.`); return; }
+  p.cash -= cost; p.stocks[sid] = (p.stocks[sid] || 0) + 1;
+  s.sharesLeft--; s.demand++;
+  p.actionsLeft--;
+  SFX.buy();
+  glog(`YOU bought ${s.name} @ $${cost}  (div $${Math.round(s.price / 5)}/round)`, 'good');
+  updateStockPrices(); render();
+}
+
+function doStockSell(sid) {
+  if (GS.currentPlayerIdx !== 0) return;
+  const p = GS.players[0];
+  if (p.actionsLeft <= 0)             { SFX.nope(); setInfo('❌ No actions remaining.'); return; }
+  if (!p.stocks[sid] || p.stocks[sid] <= 0) { SFX.nope(); setInfo('❌ No shares to sell.'); return; }
+  const s = GS.sectors[sid];
+  p.cash += s.price; p.stocks[sid]--;
+  s.sharesLeft++; s.demand = Math.max(0, s.demand - 1);
+  p.actionsLeft--;
+  SFX.sell();
+  glog(`YOU sold ${s.name} @ $${s.price}`, 'warn');
+  updateStockPrices(); render();
+}
+
+/* ── Tactical cards ── */
+function showCardMenu() {
+  if (GS.currentPlayerIdx !== 0) return;
+  const p  = GS.players[0];
+  if (p.actionsLeft <= 0) { SFX.nope(); setInfo('❌ No actions remaining.'); return; }
+  const av = p.tactics.map((t, i) => ({...t, i})).filter(t => !t.used);
+  if (av.length === 0) { SFX.nope(); setInfo('❌ All tactical cards have been used.'); return; }
+  const rows = av.map(t => `
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--s2);border:1px solid var(--border);border-radius:var(--r2);padding:9px 12px;margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">${t.icon}</span>
+        <div>
+          <div style="font-family:var(--font-ui);font-weight:700;font-size:12px;color:var(--gold)">${t.name}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">${t.effect}</div>
+        </div>
+      </div>
+      <button class="mbtn pri" style="flex:none;padding:5px 12px;font-size:10px;min-width:auto" onclick="playTacticFromMenu(${t.i})">PLAY</button>
+    </div>`).join('');
+  showModal('🃏 Tactical Cards', rows + `<div class="mbtns"><button class="mbtn" onclick="closeModal()">Cancel</button></div>`);
+}
+
+function playTacticFromMenu(i) { closeModal(); playTactic(0, i); }
+
+function playTactic(pid, i) {
+  const p = GS.players[pid];
+  if (pid === 0 && p.actionsLeft <= 0) { SFX.nope(); return; }
+  const t = p.tactics[i];
+  if (t.used) return;
+  t.used = true;
+  t.action(p);
+  if (pid === 0) { p.actionsLeft--; clearAction(); }
+  render();
+}
+
+let _autoEndTimer = null;
+function clearAction() {
+  GS.selectedAction = null;
+  ['acquire','upgrade','takeover','sell'].forEach(a =>
+    document.getElementById('btn-' + a)?.classList.remove('active'));
+  const p = GS.players[0];
+  if (GS.currentPlayerIdx === 0 && p.actionsLeft <= 0) {
+    setInfo('✓ All 3 actions used.');
+    // Show toast and auto-end after brief pause
+    clearTimeout(_autoEndTimer);
+    const toast = document.getElementById('auto-end-toast');
+    if (toast) { toast.classList.add('show'); _autoEndTimer = setTimeout(() => { toast.classList.remove('show'); endTurn(); }, 1100); }
+    else setTimeout(() => endTurn(), 1100);
+  } else {
+    const left = p.actionsLeft;
+    setInfo(`Action complete — <b style="color:var(--gold)">${left} action${left!==1?'s':''} remaining</b>. [Space] to end turn early.`);
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   AI ENGINE
+   Three distinct personalities with sell trigger for
+   cash-poor states (FIX: AI was stuck with $0 in late CRASH)
+══════════════════════════════════════════════════════ */
+async function endTurn() {
+  if (GS.currentPlayerIdx !== 0 || GS.gameOver) return;
+  SFX.endTurn();
+  GS.currentPlayerIdx = 1;
+  clearAction(); updateTurnUI();
+  for (let ai = 1; ai < GS.players.length; ai++) await runAITurn(ai);
+  endRound();
+}
+
+async function runAITurn(pid) {
+  const p  = GS.players[pid];
+  const ov = document.getElementById('ai-overlay');
+  const lb = document.getElementById('ai-lbl');
+  ov.style.background  = p.color + '12';
+  lb.textContent       = `${p.name}  thinking…`;
+  lb.style.color       = p.color;
+  lb.style.borderColor = p.color;
+  ov.classList.add('show');
+  await sleep(520);
+  p.actionsLeft = 3;
+  /* AI gets 3 decision passes */
+  for (let ap = 0; ap < 3; ap++) {
+    await sleep(260 + Math.random() * 180);
+    aiDecide(pid);
+  }
+  ov.classList.remove('show');
+  render();
+}
+
+function aiDecide(pid) {
+  const p       = GS.players[pid];
+  const style   = p.style;
+  const mine    = GS.companies.filter(c => c.ownerId === pid);
+  const unowned = GS.companies.filter(c => c.ownerId === null);
+  const enemies = GS.companies.filter(c => c.ownerId !== null && c.ownerId !== pid);
+  let best = null, bestEV = -Infinity;
+
+  /* ── AI sell trigger: cash-poor in late rounds (FIX) ── */
+  if (p.cash < 35 && mine.length > 1 && GS.round >= 3) {
+    const weakest = mine.slice().sort((a, b) => a.revenue - b.revenue)[0];
+    if (weakest) {
+      const sp = calcSellPrice(weakest);
+      p.cash += sp;
+      weakest.ownerId  = null;
+      weakest.upgrades = 0;
+      weakest.level    = 1;
+      weakest.revenue  = weakest.initRevenue;
+      SFX.aiact();
+      glog(`${p.name} sold ${weakest.name} for $${sp} (capital)`, 'info');
+      updateRegionControl(); updateStockPrices(); render();
+      return;
+    }
+  }
+
+  /* ── Acquire ── */
+  if (unowned.length > 0) {
+    const t = [...unowned].sort((a, b) => a.baseValue - b.baseValue)[0];
+    if (p.cash >= t.baseValue) {
+      const ev = t.revenue * 3 - t.baseValue;
+      if (ev > bestEV) { bestEV = ev; best = { type:'acquire', t }; }
+    }
+  }
+
+  /* ── Takeover ── */
+  if (!p._noTakeover) {
+    let tgts = enemies;
+    if (style === 'opportunist') {
+      const lead = GS.players.filter(x => x.id !== pid).sort((a,b) => calcNW(b) - calcNW(a))[0];
+      const lc   = enemies.filter(c => c.ownerId === lead?.id);
+      if (lc.length > 0) tgts = lc;
+    }
+    tgts.forEach(c => {
+      const tk = calcTakeover(pid, c);
+      const minP = style === 'aggressive' ? 0.20 : 0.30;
+      if (tk.P < minP || p.cash < tk.cost) return;
+      const gain = calcCompanyValue(c);
+      const loss = tk.cost * 0.5;
+      const ev   = tk.P * gain - (1 - tk.P) * loss
+        + (style === 'aggressive' ? 16 : style === 'opportunist' ? 10 : 0);
+      if (ev > bestEV) { bestEV = ev; best = { type:'takeover', c, tk }; }
+    });
+  }
+
+  /* ── Upgrade ── */
+  if (mine.length > 0) {
+    const t    = [...mine].sort((a, b) => a.upgrades - b.upgrades)[0];
+    const cost = 20 + t.upgrades * 10;
+    if (p.cash >= cost) {
+      const ev = t.revenue * (style === 'builder' ? 3.6 : 2.4);
+      if (ev > bestEV) { bestEV = ev; best = { type:'upgrade', t }; }
+    }
+  }
+
+  /* ── Stock investment ── */
+  if (!best && style !== 'opportunist') {
+    const scored = GS.sectors
+      .filter(s => s.sharesLeft > 0 && p.cash >= s.price)
+      .map(s => ({
+        s,
+        score: mine.filter(c => c.sectorId === s.id).length * 5
+             + s.growthScore - s.price + (style === 'builder' ? 4 : 0),
+      }))
+      .sort((a, b) => b.score - a.score);
+    if (scored.length > 0) best = { type:'invest', s: scored[0].s };
+  }
+
+  if (!best) { glog(`${p.name}: passes`, 'info'); return; }
+
+  /* ── Execute best decision ── */
+  if (best.type === 'acquire') {
+    p.cash -= best.t.baseValue; best.t.ownerId = pid;
+    SFX.aiact(); glog(`${p.name} acquired ${best.t.name} ($${best.t.baseValue})`, 'info');
+  }
+  else if (best.type === 'upgrade') {
+    applyUpgrade(best.t); SFX.aiact();
+    glog(`${p.name} upgraded ${best.t.name}`, 'info');
+  }
+  else if (best.type === 'takeover') {
+    const { c, tk } = best; const def = GS.players[c.ownerId];
+    const fp   = def.fortified ? 0.15 : 0;
+    if (def.fortified) def.fortified = false;
+    const ep   = Math.max(0.05, tk.P - fp);
+    const roll = Math.random();
+    p.cash -= tk.cost; GS.stats.toa[pid]++;
+    if (roll <= ep) {
+      c.ownerId = pid; GS.stats.tos[pid]++;
+      SFX.aiact(); glog(`${p.name} ⚔ captured ${c.name}  [${Math.round(ep * 100)}%]`, 'warn');
+    } else {
+      const ret = Math.floor(tk.cost * 0.5);
+      c.failedTakeoversAgainst++;
+      setTimeout(() => { p.cash += ret; render(); }, 1900);
+      glog(`${p.name} takeover failed: ${c.name}`, 'info');
+    }
+  }
+  else if (best.type === 'invest') {
+    const s = best.s;
+    p.cash -= s.price; p.stocks[s.id] = (p.stocks[s.id] || 0) + 1;
+    s.sharesLeft--; s.demand++;
+    SFX.aiact(); glog(`${p.name} bought ${s.name} stock`, 'info');
+  }
+
+  updateRegionControl(); updateStockPrices(); render();
+}
+
+/* ══════════════════════════════════════════════════════
+   END ROUND
+══════════════════════════════════════════════════════ */
+function endRound() {
+  /* Pop event bubbles */
+  GS.companies.forEach(c => { c._evtDef = 0; });
+  GS.sectors.forEach(s => { if (s._bubble) { s.price = s._bubble; delete s._bubble; } });
+
+  /* Revenue payout (with variance — FIX #1: only here, not in display) */
+  GS.players.forEach(p => {
+    p._noTakeover = false;
+    const rev = calcRevenue(p);
+    p.cash += rev;
+    GS.stats.rev[p.id]  = (GS.stats.rev[p.id]  || 0) + rev;
+    const nw = calcNW(p);
+    if (nw > GS.stats.peak[p.id]) GS.stats.peak[p.id] = nw;
+    if (rev > 0) glog(`${p.name}  +$${rev} revenue`, p.id === 0 ? 'good' : 'info');
+    p.actionsLeft  = 3;
+    p.fortified    = false;
+    p._revPenalty  = 1;
+  });
+
+  /* FIX #4: single drift pass at end-of-round only */
+  GS.sectors.forEach(s => {
+    const drift = Math.round(Math.random() * 3 - 1.4);
+    s.price     = Math.min(25, Math.max(5, s.price + drift));
+    s._stablePrice = s.price;
+    s.priceHistory = [...s.priceHistory, s.price].slice(-5);
+  });
+
+  if (GS.round >= GS.maxRounds) { endGame(); return; }
+
+  GS.roundPhasesIdx.push(GS.phaseIdx);
+  GS.lastPhaseIdx = GS.phaseIdx;
+  GS.round++;
+  rollPhase();
+  rollEvent();
+  GS.currentPlayerIdx = 0;
+
+  glog(`=== ROUND ${GS.round}  ·  ${GS.phase.name} ===`, 'phase');
+  render(); updateTurnUI(); renderRoundTrack(); showPhaseAnnounce();
+}
+
+function endGame() {
+  GS.gameOver = true;
+  SFX.gameOver();
+  const scores = GS.players
+    .map(p => ({
+      ...p,
+      nw:   calcNW(p),
+      cos:  GS.companies.filter(c => c.ownerId === p.id).length,
+      regs: GS.regions.filter(r => r.controller === p.id).length,
+    }))
+    .sort((a, b) => b.nw - a.nw);
+  const winner = scores[0];
+  const standRows = scores.map((s, i) => `
+    <div class="mrow">
+      <div class="ml" style="color:${s.color};font-family:var(--font-ui);font-weight:700">
+        ${i === 0 ? '🏆 ' : ''}${s.name}
+      </div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="mv gold" style="font-size:15px">$${s.nw}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">${s.cos}co · ${s.regs}reg</div>
+      </div>
+    </div>`).join('');
+  const statRows = scores.map(s => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">
+      <div style="color:${s.color};font-family:var(--font-ui);font-weight:700;font-size:10px;min-width:54px">${s.name}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">TOs <span style="color:var(--gold)">${GS.stats.toa[s.id]}</span></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">Win% <span style="color:var(--green-lt)">${GS.stats.toa[s.id] > 0 ? Math.round(GS.stats.tos[s.id] / GS.stats.toa[s.id] * 100) + '%' : '—'}</span></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">Rev <span style="color:var(--blue-lt)">$${GS.stats.rev[s.id]}</span></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">Peak <span style="color:var(--gold)">$${GS.stats.peak[s.id]}</span></div>
+    </div>`).join('');
+  showModal('Game Over', `
+    <div style="text-align:center;padding:14px 0 18px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--tx-lo);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px">Winner</div>
+      <div style="font-family:var(--font-ui);font-weight:800;font-size:32px;color:${winner.color}">${winner.name}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--gold);margin-top:4px">$${winner.nw}</div>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--tx-lo);margin-bottom:6px">Final Standings</div>
+    ${standRows}
+    <div style="font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--tx-lo);margin:12px 0 6px">Game Stats</div>
+    ${statRows}
+    <div class="mbtns"><button class="mbtn pri" onclick="location.reload()">▶ Play Again</button></div>`);
+}
+
+
+/* ──────────────────── RENDER ──────────────────── */
+
+/* ═══════════════════════════════════════════
+   CORPORATE DOMINION v7 — RENDER ENGINE
+   All DOM writes live here. Uses new layout:
+   #board (4-col regions), #action-dock,
+   #intel-area (stocks + rivals), right sidebar
+═══════════════════════════════════════════ */
+
+let _stocksVisible = false; // toggled on mobile
+
+function render() {
+  renderTopBar();
+  renderPlayers();
+  renderPlayerHUD();
+  renderMap();
+  renderRightSidebar();
+  updateTurnUI();
+}
+
+/* ── Topbar: phase label + logo sub ── */
+function renderTopBar() {
+  const p  = GS.players[0];
+  const ph = GS.phase;
+  // Phase label in topbar
+  const lbl = document.getElementById('phase-label');
+  if (lbl) { lbl.textContent = ph.name; lbl.style.color = ph.color; }
+  // Logo sub shows round + action count
+  const ls = document.getElementById('logo-sub');
+  if (ls) ls.textContent = `ROUND ${GS.round}/${GS.maxRounds} · ${p.actionsLeft} ACTIONS`;
+  // Action dock pill
+  const ap = document.getElementById('ap-count');
+  if (ap) ap.textContent = p.actionsLeft;
+}
+
+/* ── Round track (desktop, hidden on mobile) ── */
+function renderRoundTrack() {
+  const el = document.getElementById('round-track');
+  if (!el) return;
+  el.innerHTML = Array.from({ length: GS.maxRounds }, (_, i) => {
+    const rnd=i+1, done=rnd<GS.round, cur=rnd===GS.round;
+    const phIdx=GS.roundPhasesIdx[i];
+    const col=(done&&phIdx!=null)?PHASES[phIdx].color:'';
+    const style=(done&&col)?`background:${col}30;border-color:${col}70;color:${col}`:'';
+    return `<div class="rtp ${done?'done':''} ${cur?'cur':''}" style="${style}">${rnd}</div>`;
+  }).join('');
+}
+
+/* ── Left sidebar: player list ── */
+function renderPlayers() {
+  const nws   = GS.players.map(p => calcNW(p));
+  const maxNW = Math.max(...nws, 1);
+  document.getElementById('player-list').innerHTML = GS.players.map((p, i) => {
+    const nw=nws[i], active=i===GS.currentPlayerIdx;
+    const crown=(nw===maxNW&&GS.round>1)?'👑 ':'';
+    const bars = Array.from({length:3},(_,j)=>
+      `<div class="pe-bar" style="background:${j<p.actionsLeft?p.color:p.color+'22'}"></div>`
+    ).join('');
+    return `<div class="pe${active?' active-p':''}">
+      <div class="pe-active-bar" style="background:${p.color};display:${active?'block':'none'}"></div>
+      <div class="pe-name" style="color:${p.color}">
+        ${active?'▶ ':''}${crown}${p.name}${p.fortified?' 🛡':''}
+        ${!p.isHuman?'<span style="font-size:9px;color:var(--tx-lo);margin-left:4px">AI</span>':''}
+      </div>
+      <div class="pe-stats">
+        <div>
+          <div class="pe-stat-lbl">Cash</div>
+          <div class="pe-cash">$${p.cash}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="pe-stat-lbl">Net Worth</div>
+          <div class="pe-nw">$${nw}</div>
+        </div>
+      </div>
+      <div class="pe-bars">${bars}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ── Mobile player strip ── */
+function renderPlayerHUD() {
+  const strip = document.getElementById('player-strip');
+  if (!strip) return;
+  const nws = GS.players.map(p => calcNW(p));
+  const maxNW = Math.max(...nws, 1);
+  const playerCols = GS.players.map((p, i) => {
+    const active = i === GS.currentPlayerIdx;
+    const dots = Array.from({length:3},(_,j)=>
+      `<div class="ps-dot" style="background:${j<p.actionsLeft?p.color:p.color+'22'}"></div>`
+    ).join('');
+    const crown = (nws[i]===maxNW&&GS.round>1)?'👑':'';
+    return `<div class="ps-col${active?' ps-active':''}">
+      <div class="ps-name" style="color:${p.color}">${active?'▶ ':''}${crown}${p.name}</div>
+      <div class="ps-cash">$${p.cash}</div>
+      <div class="ps-nw">NW $${nws[i]}</div>
+      <div class="ps-dots">${dots}</div>
+    </div>`;
+  }).join('');
+  const roundDots = Array.from({length:GS.maxRounds},(_,i)=>{
+    const rnd=i+1,done=rnd<GS.round,cur=rnd===GS.round;
+    const phIdx=GS.roundPhasesIdx[i];
+    const col=(done&&phIdx!=null)?PHASES[phIdx].color:'';
+    const style=col?`background:${col}30;border-color:${col}88;color:${col}`:'';
+    return `<div class="ps-r${cur?' cur':''}${done?' done':''}" style="${style}">${rnd}</div>`;
+  }).join('');
+  strip.innerHTML = playerCols + `<div class="ps-rounds">${roundDots}</div>`;
+}
+
+/* ── Map / Board — 4-column vertical layout ── */
+function renderMap() {
+  const board = document.getElementById('board');
+  const aiOvl = document.getElementById('ai-overlay');
+  board.innerHTML = '';
+  board.appendChild(aiOvl);
+
+  REGIONS.forEach((r, ri) => {
+    const region = GS.regions[ri];
+    const ctrl   = region.controller;
+    const ctrlP  = ctrl !== null ? GS.players[ctrl] : null;
+
+    const col = document.createElement('div');
+    col.className = 'region-col';
+
+    // Region header
+    const ctrlBadge = ctrlP
+      ? `<div class="reg-ctrl" style="background:${ctrlP.color}15;color:${ctrlP.color};border:1px solid ${ctrlP.color}44">CTRL ${ctrlP.name}</div>`
+      : `<div class="reg-ctrl" style="color:var(--tx-lo)">OPEN</div>`;
+    col.innerHTML = `
+      <div class="reg-hdr ${r.rc}">
+        <span class="reg-icon">${r.icon}</span>
+        <span class="reg-name">${r.name}</span>
+        ${ctrlBadge}
+      </div>
+      <div class="reg-companies" id="rc-${ri}"></div>`;
+    board.appendChild(col);
+
+    const cosEl = col.querySelector(`#rc-${ri}`);
+    GS.companies.filter(c => c.regionIdx === ri).forEach(c => {
+      const owner  = c.ownerId !== null ? GS.players[c.ownerId] : null;
+      const action = GS.selectedAction;
+      let hi = '';
+      if (action==='acquire'  && c.ownerId===null)                     hi='hi-acq';
+      if (action==='upgrade'  && c.ownerId===0)                        hi='hi-upg';
+      if (action==='takeover' && c.ownerId!==null && c.ownerId!==0)    hi='hi-tak';
+      if (action==='sell'     && c.ownerId===0)                        hi='hi-sell';
+
+      const card = document.createElement('div');
+      card.className   = `cc${owner?' owned-'+owner.id:''} ${hi}`;
+      card.dataset.cid = c.id;
+      card.onclick     = () => handleCompanyClick(c.id);
+      card.onmouseenter = () => {
+        if (action==='takeover' && c.ownerId!==null && c.ownerId!==0) {
+          GS.lastHoveredTak = c;
+        }
+        if (action==='acquire' && c.ownerId===null)
+          setInfo(`🏢 Acquire <b>${c.name}</b> — Cost: <b style="color:var(--gold-lt)">$${c.baseValue}</b> · Rev $${c.revenue}/rnd · ${SECTORS[c.sectorId].name}${c.trait?' · '+c.trait.name:''}`);
+        if (action==='upgrade' && c.ownerId===0)
+          setInfo(`⬆ Upgrade <b>${c.name}</b> — Cost: <b style="color:var(--gold-lt)">$${20+c.upgrades*10}</b> · New rev $${c.revenue+3}/rnd`);
+        if (action==='sell' && c.ownerId===0)
+          setInfo(`📈 Sell <b>${c.name}</b> — Receive: <b style="color:var(--amber)">$${calcSellPrice(c)}</b> (65% of $${calcCompanyValue(c)})`);
+      };
+
+      const lvProg = ((c.upgrades % 2) / 2) * 100;
+      const trHtml = c.trait
+        ? `<span class="co-trait" style="background:${c.trait.color}18;color:${c.trait.color};border:1px solid ${c.trait.color}44">${c.trait.name}</span>`
+        : '';
+      const ownerBadge = owner
+        ? `<div class="co-owner-badge" style="background:${owner.color}20;color:${owner.color};border:1px solid ${owner.color}40">${owner.name[0]}</div>`
+        : '';
+      const revColor = c.revenue>20?'var(--gold-lt)':c.revenue>14?'var(--green-lt)':'var(--tx-md)';
+
+      card.innerHTML = `
+        ${c.ownerId===null?`<div class="acq-cost">$${c.baseValue}</div>`:''}
+        <div class="co-top">
+          <div class="co-name">${c.name}</div>
+          ${ownerBadge}
+        </div>
+        <div class="co-rev-row">
+          <div>
+            <div class="co-rev-lbl">Rev/rnd</div>
+            <div class="co-rev-val" style="color:${revColor}">$${c.revenue}</div>
+          </div>
+        </div>
+        <div class="co-meta">
+          <span class="co-lv">Lv${c.level}+${c.upgrades}</span>
+          ${trHtml}
+          ${owner&&owner.fortified?'<span style="font-size:10px">🛡</span>':''}
+        </div>
+        <div class="lv-bar"><div class="lv-fill" style="width:${lvProg}%;background:${owner?owner.color:'var(--green)'}"></div></div>`;
+
+      cosEl.appendChild(card);
+    });
+  });
+}
+
+/* ── Right sidebar: CEO + Intel + Stocks + Cards ── */
+function renderRightSidebar() {
+  renderCEO();
+  renderIntel();
+  renderCards();
+}
+
+function renderCEO() {
+  const p = GS.players[0];
+  const el = document.getElementById('ceo-disp');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="ceo-block">
+      <div class="ceo-avatar">${p.name[0]}</div>
+      <div class="ceo-name">${p.name}</div>
+      <div class="ceo-title">${p.ceo.type}</div>
+      <div class="ceo-bonus">⚡ ${p.ceo.bonus}</div>
+    </div>`;
+}
+
+function renderIntel() {
+  const el = document.getElementById('intel-area');
+  if (!el) return;
+  const nws = GS.players.map(p => calcNW(p));
+
+  // Competitor rows
+  const rivals = GS.players.slice(1).map((q, i) =>
+    `<div class="intel-row">
+      <div class="intel-dot" style="background:${q.color}"></div>
+      <div class="intel-name" style="color:${q.color}">${q.name}</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">
+        <div class="intel-nw" style="font-size:10px;color:var(--tx-hi)">$${q.cash}<span style="color:var(--tx-lo);margin-left:4px;font-size:9px">cash</span></div>
+        <div class="intel-nw">NW $${nws[i+1]}</div>
+      </div>
+    </div>`
+  ).join('');
+
+  // Stocks section
+  const p = GS.players[0];
+  const myT = GS.currentPlayerIdx === 0;
+  const stockRows = GS.sectors.map((s, i) => {
+    const mine=p.stocks[i]||0, cost=s.price-p.ceo.stockBonus;
+    const canB=myT&&p.actionsLeft>0&&s.sharesLeft>0&&p.cash>=cost;
+    const canS=myT&&p.actionsLeft>0&&mine>0;
+    const div=Math.round(s.price/5);
+    const hist=s.priceHistory, prev=hist.length>1?hist[hist.length-2]:s.price;
+    const delta=s.price-prev;
+    const dc=delta>0?'var(--green-lt)':delta<0?'var(--red-lt)':'var(--tx-lo)';
+    const ds=delta>0?'+'+delta:delta;
+    return `<div class="stock-row">
+      <div class="sr-left">
+        <div class="sr-name">${s.name}</div>
+        <div class="sr-meta">$${s.price} <span style="color:${dc}">${ds}</span> · div+$${div}</div>
+        ${mine>0?`<div class="sr-owned">${mine} share${mine>1?'s':''}</div>`:''}
+      </div>
+      <div class="sr-btns">
+        <button class="sab buy"  onclick="doStockBuy(${i})"  ${canB?'':'disabled'}>BUY</button>
+        <button class="sab sell" onclick="doStockSell(${i})" ${canS?'':'disabled'}>SELL</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = rivals +
+    `<div style="padding:8px 14px 4px;border-top:1px solid var(--border);margin-top:4px">
+      <div style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:.12em;color:var(--tx-lo);text-transform:uppercase;margin-bottom:6px">📊 STOCK MARKET</div>
+      ${stockRows}
+    </div>`;
+}
+
+function renderStocks() { renderIntel(); } // alias for compatibility
+
+function renderCards() {
+  const p  = GS.players[0];
+  const el = document.getElementById('cards-area');
+  if (!el) return;
+  const cnt = document.getElementById('hand-count');
+  const unused = p.tactics.filter(t => !t.used).length;
+  if (cnt) cnt.textContent = unused;
+  el.innerHTML = p.tactics.map((t, i) => `
+    <div class="tcard ${t.used?'used':''}" onclick="${t.used?'':'playTactic(0,'+i+')'}">
+      <div class="tc-header">
+        <span class="tc-icon">${t.icon}</span>
+        <span class="tc-nm">${t.name}</span>
+      </div>
+      <div class="tc-ef">${t.effect}</div>
+      ${t.used?'<div class="tc-used">USED</div>':''}
+    </div>`).join('');
+}
+
+/* ── Turn UI: dock buttons + end turn btn ── */
+function updateTurnUI() {
+  const human = GS.currentPlayerIdx === 0;
+  const endBtn = document.getElementById('end-turn-btn');
+  if (endBtn) { endBtn.disabled = !human; }
+  const dock = document.getElementById('action-dock');
+  if (dock) {
+    dock.style.opacity       = human ? '1' : '0.38';
+    dock.style.pointerEvents = human ? 'auto' : 'none';
+  }
+  // Net lock overlay
+  const lock = document.getElementById('net-lock');
+  if (lock) {
+    if (!human && MP && MP.active) {
+      const p = GS.players[GS.currentPlayerIdx];
+      document.getElementById('net-lock-name').textContent = p.name;
+      lock.classList.add('show');
+    } else { lock.classList.remove('show'); }
+  }
+}
+
+/* ── Phase Announce ── */
+let _phaseTimer = null;
+function showPhaseAnnounce() {
+  SFX.phase();
+  const ph = GS.phase;
+  document.getElementById('pa-round').textContent  = GS.round;
+  document.getElementById('pa-name').textContent   = ph.name;
+  document.getElementById('pa-name').style.color   = ph.color;
+  document.getElementById('pa-effect').textContent = ph.effect;
+  const pa = document.getElementById('phase-announce');
+  pa.style.borderColor = ph.color;
+  pa.style.boxShadow   = `0 0 40px ${ph.color}33`;
+  const eEl = document.getElementById('pa-event');
+  if (GS.currentEvent && GS.round > 1) {
+    eEl.textContent = `${GS.currentEvent.icon}  ${GS.currentEvent.name} — ${GS.currentEvent.effect}`;
+    eEl.classList.add('show');
+  } else { eEl.classList.remove('show'); }
+  pa.classList.add('show');
+  const fill = document.getElementById('pa-pfill');
+  fill.style.background = ph.color; fill.style.transition='none'; fill.style.width='0%';
+  requestAnimationFrame(() => { fill.style.transition='width 4s linear'; fill.style.width='100%'; });
+  _phaseTimer = setTimeout(dismissPhase, 5000);
+}
+function dismissPhase() {
+  clearTimeout(_phaseTimer);
+  document.getElementById('phase-announce').classList.remove('show');
+}
+
+/* ── Takeover calc (shown in modal) ── */
+function updateTakeoverCalc(company) {
+  // Nothing to do here — takeover info is shown in the handleCompanyClick modal
+}
+
+/* ── Modal ── */
+function showModal(title, content) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-content').innerHTML = content;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('show'); }
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('modal-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+});
+
+/* ── Info strip ── */
+function setInfo(msg) {
+  const el = document.getElementById('info-strip');
+  if (el) el.innerHTML = msg;
+}
+
+/* ── Sidebar toggle ── */
+function toggleLeft() {
+  const l = document.getElementById('left');
+  if (window.innerWidth <= 640) l.classList.toggle('drawer-open');
+  else l.classList.toggle('collapsed');
+}
+
+/* ── Activity log ── */
+function glog(msg, type='info') {
+  const el = document.getElementById('log-area');
+  const d  = document.createElement('div');
+  d.className   = 'le ' + type;
+  d.textContent = `[R${GS.round}] ${msg}`;
+  el.insertBefore(d, el.firstChild);
+  while (el.children.length > 120) el.removeChild(el.lastChild);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ── Rulebook ── */
+function showRulebook() {
+  SFX.ui();
+  showModal('📖 Rulebook', `
+    <div class="rb-s"><h3>Win Condition</h3>
+      <p>Highest <span class="rg">Net Worth</span> after 6 rounds wins. NW = Cash + Company Values + Stocks.</p></div>
+    <div class="rb-s"><h3>Actions (3 per turn)</h3><ul>
+      <li><b>[1] Acquire</b> — Buy an unowned company at base cost.</li>
+      <li><b>[2] Upgrade</b> — $20 + $10×upgrades. +$3 rev, +2 def. Every 2 upgrades = level up.</li>
+      <li><b>[3] Takeover</b> — Pay cost upfront. Dice decides outcome.</li>
+      <li><b>[S] Sell Co</b> — Sell your company for 65% of value.</li>
+      <li><b>Stocks</b> — Trade in the right panel. Earn dividends each round.</li>
+      <li><b>[4] Card</b> — One-time tactical card from your hand.</li>
+    </ul></div>
+    <div class="rb-s"><h3>Takeover</h3>
+      <p>A = (Cash×0.15) + CEO attack + Phase mod</p>
+      <p>D = 6 + Level×3 + Upgrades×2 + Region(6) + CEO def + Traits</p>
+      <p>P = A÷(A+D), capped 5–93%.</p></div>
+    <div class="rb-s"><h3>Phases</h3><ul>
+      <li><span class="rg">BOOM</span> — Rev ×1.5, Stocks +3, harder takeovers</li>
+      <li><span class="rb">STABLE</span> — Normal</li>
+      <li><span class="ro">RECESSION</span> — Rev ×0.7, Stocks −3, easier takeovers</li>
+      <li><span class="rr">CRASH</span> — Rev ×0.4, Stocks −5, chaos</li>
+    </ul></div>
+    <div class="rb-s"><h3>Region Control</h3>
+      <p>Own <b>both</b> companies in a region → +$5 rev/co + +6 defense per company.</p></div>
+    <div class="mbtns" style="padding-top:4px"><button class="mbtn pri" onclick="closeModal()">Got it ✓</button></div>`);
+}
+
+/* ── Keyboard shortcuts ── */
+document.addEventListener('keydown', e => {
+  const blocked = ['modal-overlay','setup-overlay','tut-overlay','dice-overlay','phase-announce'];
+  if (blocked.some(id => {
+    const el=document.getElementById(id);
+    return el&&(el.classList.contains('show')||el.style.display==='flex'||el.style.display==='block');
+  })) return;
+  if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) return;
+  switch(e.key) {
+    case '1': setAction('acquire');  break;
+    case '2': setAction('upgrade');  break;
+    case '3': setAction('takeover'); break;
+    case '4': showCardMenu();        break;
+    case 's': case 'S': setAction('sell'); break;
+    case 'p': case 'P': passAction();      break;
+    case ' ': e.preventDefault(); endTurn(); break;
+    case 'Escape': clearAction(); break;
+  }
+});
+
+
+/* ──────────────────── MULTIPLAYER ──────────────────── */
+
+/* ═══════════════════════════════════════════
+   CORPORATE DOMINION v7 — MULTIPLAYER ENGINE
+   PeerJS WebRTC · Host-authoritative
+   BUGS FIXED:
+   1. Client lobby/setup overlay now hidden when game starts
+   2. Client can request state resend if packet missed
+   3. Host rebuilds startup bonuses for actual player count
+   4. mpApplyState hides overlays on first packet
+═══════════════════════════════════════════ */
+
+function setupTab(tab) {
+  document.getElementById('stab-solo').classList.toggle('active', tab === 'solo');
+  document.getElementById('stab-online').classList.toggle('active', tab === 'online');
+  document.getElementById('spane-solo').classList.toggle('active', tab === 'solo');
+  document.getElementById('spane-online').classList.toggle('active', tab === 'online');
+  SFX.ui();
+}
+
+/* ── Online role selection ── */
+function mpSelectRole(role) {
+  MP.role = role;
+  document.getElementById('mp-host-card').classList.toggle('sel', role === 'host');
+  document.getElementById('mp-join-card').classList.toggle('sel', role === 'join');
+  document.getElementById('mp-join-row').style.display = role === 'join' ? 'flex' : 'none';
+  SFX.ui();
+}
+
+/* ── Generate / validate room code ── */
+function mpGenCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+function mpPeerId(code, slot) { return `corpdom-${code}-${slot}`; }
+
+/* ── Copy room code to clipboard ── */
+function mpCopyCode() {
+  navigator.clipboard?.writeText(MP.roomCode).catch(()=>{});
+  const el = document.getElementById('lobby-code');
+  el.style.opacity = '0.4';
+  setTimeout(() => el.style.opacity = '1', 600);
+  setLobbyStatus('ok', `Room code ${MP.roomCode} copied to clipboard!`);
+}
+
+function setLobbyStatus(state, msg) {
+  const dot = document.getElementById('lobby-dot');
+  dot.className = 'lobby-dot ' + state;
+  document.getElementById('lobby-status-txt').textContent = msg;
+}
+
+/* ─────────────────────────────────────────────
+   CONNECT — host or join
+───────────────────────────────────────────── */
+function mpConnect() {
+  const role = MP.role;
+  if (!role || role === 'solo') { alert('Select Host or Join first.'); return; }
+
+  if (role === 'join') {
+    const code = document.getElementById('mp-code-input').value.trim().toUpperCase();
+    if (code.length !== 6) { alert('Enter a 6-character room code.'); return; }
+    MP.roomCode = code;
+  } else {
+    MP.roomCode = mpGenCode();
+  }
+
+  MP.tutCheck = document.getElementById('tut-check-mp')?.checked ?? true;
+  MP.isHost   = role === 'host';
+  MP.active   = true;
+
+  // Show lobby
+  document.getElementById('setup-overlay').style.display = 'none';
+  document.getElementById('lobby-overlay').classList.add('show');
+  document.getElementById('lobby-code').textContent = MP.roomCode;
+  document.getElementById('lobby-code-block').style.display = MP.isHost ? 'block' : 'none';
+
+  if (MP.isHost) {
+    document.getElementById('lobby-title').textContent = 'Your Room';
+    document.getElementById('lobby-sub').textContent   = 'Share the code below — up to 3 friends can join';
+    mpInitHost();
+  } else {
+    document.getElementById('lobby-title').textContent = 'Joining Room';
+    document.getElementById('lobby-sub').textContent   = `Connecting to room ${MP.roomCode}…`;
+    mpInitClient();
+  }
+}
+
+/* ─────────────────────────────────────────────
+   HOST SETUP
+───────────────────────────────────────────── */
+function mpInitHost() {
+  MP.localSlot = 0;
+  MP.slots[0]  = { name:'YOU (Host)', filled:true, ready:true, peerId:null, isLocal:true };
+  setLobbyStatus('connecting', 'Opening connection server…');
+
+  try {
+    MP.peer = new Peer(mpPeerId(MP.roomCode, 0), { debug: 0 });
+  } catch(e) {
+    setLobbyStatus('err', 'PeerJS not available — check internet connection.');
+    return;
+  }
+
+  MP.peer.on('open', id => {
+    setLobbyStatus('ok', `Room open · Waiting for players (${Object.keys(MP.conns).length}/3 joined)`);
+    renderLobby();
+  });
+
+  MP.peer.on('connection', conn => {
+    conn.on('open', () => {
+      // Assign next free slot
+      const slot = MP.slots.findIndex((s, i) => i > 0 && !s.filled);
+      if (slot === -1) { conn.send({type:'full'}); conn.close(); return; }
+      MP.conns[conn.peer] = conn;
+      MP.slots[slot] = { name:`Player ${slot+1}`, filled:true, ready:false, peerId:conn.peer, isLocal:false };
+      conn.send({ type:'assigned', slot, roomCode:MP.roomCode });
+      mpHostBroadcast({ type:'lobby', slots: MP.slots });
+      setLobbyStatus('ok', `${Object.keys(MP.conns).length} player(s) connected — waiting for ready…`);
+      renderLobby();
+
+      conn.on('data', data => mpHostReceive(data, conn.peer));
+      conn.on('close', () => {
+        MP.slots[slot] = { name:'—', filled:false, ready:false, peerId:null, isLocal:false };
+        delete MP.conns[conn.peer];
+        mpHostBroadcast({ type:'lobby', slots: MP.slots });
+        renderLobby();
+        setLobbyStatus('ok', `Player disconnected. ${Object.keys(MP.conns).length} connected.`);
+        mpCheckStartable();
+      });
+    });
+  });
+
+  MP.peer.on('error', e => {
+    setLobbyStatus('err', `Connection error: ${e.type}`);
+  });
+
+  renderLobby();
+}
+
+function mpHostReceive(data, peerId) {
+  if (data.type === 'ready') {
+    const slot = MP.slots.findIndex(s => s.peerId === peerId);
+    if (slot !== -1) { MP.slots[slot].ready = true; }
+    mpHostBroadcast({ type:'lobby', slots: MP.slots });
+    renderLobby();
+    mpCheckStartable();
+  }
+  if (data.type === 'action' && MP.active && GS.currentPlayerIdx === mpSlotForPeer(peerId)) {
+    // Client submitted an action — execute on host then broadcast state
+    mpExecuteRemoteAction(data, mpSlotForPeer(peerId));
+  }
+}
+
+function mpSlotForPeer(peerId) {
+  return MP.slots.findIndex(s => s.peerId === peerId);
+}
+
+function mpHostBroadcast(msg) {
+  Object.values(MP.conns).forEach(c => { try { c.send(msg); } catch(e){} });
+}
+
+function mpCheckStartable() {
+  const humanSlots = MP.slots.filter(s => s.filled);
+  const allReady   = humanSlots.every(s => s.ready || s.isLocal);
+  const btn        = document.getElementById('lobby-start-btn');
+  if (btn) btn.disabled = !allReady;
+}
+
+/* ─────────────────────────────────────────────
+   CLIENT SETUP
+───────────────────────────────────────────── */
+function mpInitClient() {
+  setLobbyStatus('connecting', `Connecting to room ${MP.roomCode}…`);
+  try {
+    const clientId = `corpdom-${MP.roomCode}-c${Date.now()}`;
+    MP.peer = new Peer(clientId, { debug: 0 });
+  } catch(e) {
+    setLobbyStatus('err', 'PeerJS not available — check internet connection.');
+    return;
+  }
+
+  MP.peer.on('open', () => {
+    setLobbyStatus('connecting', 'Reaching host…');
+    const conn = MP.peer.connect(mpPeerId(MP.roomCode, 0));
+    MP.hostConn = conn;
+
+    conn.on('open', () => {
+      setLobbyStatus('ok', 'Connected to host — waiting for slot assignment…');
+    });
+
+    conn.on('data', data => mpClientReceive(data));
+
+    conn.on('close', () => {
+      setLobbyStatus('err', 'Lost connection to host.');
+      if (!GS.gameOver) showModal('Disconnected', `<p style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx-md);margin-bottom:14px">Lost connection to the host. The game cannot continue.</p><div class="mbtns"><button class="mbtn pri" onclick="location.reload()">Reload</button></div>`);
+    });
+
+    conn.on('error', e => setLobbyStatus('err', `Peer error: ${e}`));
+  });
+
+  MP.peer.on('error', e => {
+    if (e.type === 'peer-unavailable') {
+      setLobbyStatus('err', `Room "${MP.roomCode}" not found. Check the code and try again.`);
+    } else {
+      setLobbyStatus('err', `Connection error: ${e.type}`);
+    }
+  });
+
+  // Mark self as ready immediately (client has no "ready" button flow — just joins)
+  setTimeout(() => {
+    if (MP.hostConn?.open) MP.hostConn.send({ type:'ready' });
+  }, 2000);
+}
+
+function mpClientReceive(data) {
+  if (data.type === 'full') {
+    setLobbyStatus('err', 'Room is full (4 players max).');
+    return;
+  }
+  if (data.type === 'assigned') {
+    MP.localSlot = data.slot;
+    setLobbyStatus('ok', `Joined as Player ${data.slot + 1} — waiting for host to start…`);
+    if (MP.hostConn?.open) MP.hostConn.send({ type:'ready' });
+  }
+  if (data.type === 'lobby') {
+    MP.slots = data.slots;
+    renderLobby();
+  }
+  if (data.type === 'start') {
+    mpClientBeginGame(data);
+  }
+  if (data.type === 'state') {
+    mpApplyState(data.gs);
+  }
+}
+
+/* ─────────────────────────────────────────────
+   LOBBY RENDER
+───────────────────────────────────────────── */
+function renderLobby() {
+  const el = document.getElementById('lobby-slots');
+  if (!el) return;
+  el.innerHTML = MP.slots.map((s, i) => {
+    const pColor = PLAYER_DEFS[i]?.color || '#666';
+    let badge = '';
+    if (i === 0 && s.filled) badge = `<div class="lslot-badge host">HOST</div>`;
+    else if (s.filled && s.ready) badge = `<div class="lslot-badge ready">READY</div>`;
+    else if (s.filled) badge = `<div class="lslot-badge wait">JOINING</div>`;
+    else badge = `<div class="lslot-badge ai">AI BOT</div>`;
+    return `<div class="lslot ${s.filled ? 'filled' : ''}">
+      <div class="lslot-num">${i+1}</div>
+      <div class="lslot-icon">${s.filled ? '🧑' : '🤖'}</div>
+      <div class="lslot-name" style="color:${s.filled ? pColor : 'var(--tx-lo)'}">${s.filled ? s.name : 'Open Slot'}</div>
+      ${badge}
+    </div>`;
+  }).join('');
+
+  // Update start button
+  if (MP.isHost) mpCheckStartable();
+}
+
+/* ─────────────────────────────────────────────
+   START GAME (host triggers)
+───────────────────────────────────────────── */
+function mpStartGame() {
+  if (!MP.isHost) return;
+  const humanCount = MP.slots.filter(s => s.filled).length;
+  const numAI      = 3 - (humanCount - 1); // fill remaining with AI
+  MP.numHumans     = humanCount;
+
+  // Build player defs: human slots first, AI fill rest
+  // We repurpose PLAYER_DEFS but set isHuman flags per slot
+  const startData = {
+    type: 'start',
+    roomCode: MP.roomCode,
+    numAI,
+    humanSlots: MP.slots.map((s,i) => ({ slot:i, filled:s.filled, name:s.name })),
+    tutCheck: MP.tutCheck,
+  };
+  mpHostBroadcast(startData);
+  mpBeginGameAsHost(startData);
+}
+
+function mpBeginGameAsHost(data) {
+  document.getElementById('lobby-overlay').classList.remove('show');
+
+  // Mark non-human slots as AI
+  data.humanSlots.forEach((s, i) => {
+    if (i > 0 && PLAYER_DEFS[i]) {
+      PLAYER_DEFS[i].isHuman = s.filled;
+      if (s.filled) PLAYER_DEFS[i].name = s.name || `P${i+1}`;
+    }
+  });
+
+  // Compute how many AI needed
+  const numAI = PLAYER_DEFS.slice(1).filter(p => !p.isHuman).length;
+  // Pad to always have 4 players but correctly flagged
+  const totalAI = 3; // always init 4p, some are human
+  initGameData(totalAI); // inits all 4 player slots
+
+  // Override isHuman on GS.players
+  GS.players.forEach((p, i) => {
+    p.isHuman = MP.slots[i]?.filled ?? (i === 0);
+  });
+
+  // Rebuild bonuses for actual player count (was only built for preview count)
+  buildBonusPreview(GS.players.length);
+  GS.players.forEach((p, i) => startupBonuses[i]?.apply(p));
+  updateRegionControl();
+  updateStockPrices();
+  setPhase(1);
+
+  render(); renderRoundTrack();
+  mpBroadcastState(); // send initial state to all clients
+
+  if (data.tutCheck) startTutorial(); else showPhaseAnnounce();
+  glog('=== ONLINE GAME STARTED ===', 'phase');
+}
+
+function mpClientBeginGame(data) {
+  // Hide both overlays — critical fix: setup was staying visible on client
+  document.getElementById('lobby-overlay').classList.remove('show');
+  document.getElementById('setup-overlay').style.display = 'none';
+  setInfo('⏳ Waiting for host to send game state…');
+  // If host already sent state before this callback fired, request resend
+  if (MP.hostConn && MP.hostConn.open) {
+    MP.hostConn.send({ type: 'requestState' });
+  }
+}
+
+/* ─────────────────────────────────────────────
+   STATE SYNC
+   Serialise/deserialise GS for network transfer
+   Tactics action functions are stripped and reconstructed by index
+───────────────────────────────────────────── */
+function mpSerialiseGS() {
+  return {
+    round:        GS.round,
+    maxRounds:    GS.maxRounds,
+    phaseIdx:     GS.phaseIdx,
+    lastPhaseIdx: GS.lastPhaseIdx,
+    currentPlayerIdx: GS.currentPlayerIdx,
+    gameOver:     GS.gameOver,
+    currentEvent: GS.currentEvent ? GS.currentEvent.name : null,
+    roundPhasesIdx: GS.roundPhasesIdx,
+    stats:        GS.stats,
+    players: GS.players.map(p => ({
+      id: p.id, name: p.name, color: p.color, isHuman: p.isHuman, style: p.style,
+      cash: p.cash, actionsLeft: p.actionsLeft, stocks: p.stocks,
+      ceo: p.ceo, fortified: p.fortified, _noTakeover: p._noTakeover, _revPenalty: p._revPenalty,
+      tactics: p.tactics.map(t => ({ name:t.name, icon:t.icon, effect:t.effect, used:t.used,
+        poolIdx: TACTICS_POOL.findIndex(tp => tp.name === t.name) })),
+    })),
+    companies: GS.companies.map(c => ({ ...c, trait: c.trait ? c.trait.name : null })),
+    sectors:   GS.sectors,
+    regions:   GS.regions,
+  };
+}
+
+function mpApplyState(gs) {
+  GS.round        = gs.round;
+  GS.maxRounds    = gs.maxRounds;
+  GS.phaseIdx     = gs.phaseIdx;
+  GS.lastPhaseIdx = gs.lastPhaseIdx;
+  GS.phase        = PHASES[gs.phaseIdx];
+  GS.currentPlayerIdx = gs.currentPlayerIdx;
+  GS.gameOver     = gs.gameOver;
+  GS.roundPhasesIdx = gs.roundPhasesIdx;
+  GS.stats        = gs.stats;
+  GS.sectors      = gs.sectors;
+  GS.regions      = gs.regions;
+
+  // Restore event
+  if (gs.currentEvent) {
+    GS.currentEvent = GLOBAL_EVENTS.find(e => e.name === gs.currentEvent) || null;
+  } else { GS.currentEvent = null; }
+
+  // Restore players (with tactic action functions)
+  GS.players = gs.players.map(p => ({
+    ...p,
+    tactics: p.tactics.map(t => {
+      const pool = t.poolIdx >= 0 ? TACTICS_POOL[t.poolIdx] : TACTICS_POOL[0];
+      return { ...pool, used: t.used };
+    }),
+  }));
+
+  // Ensure overlays are hidden when first state arrives
+  document.getElementById('setup-overlay').style.display = 'none';
+  document.getElementById('lobby-overlay').classList.remove('show');
+
+  // Restore companies (with trait objects)
+  GS.companies = gs.companies.map(c => ({
+    ...c,
+    trait: c.trait ? COMPANY_TRAITS.find(t => t.name === c.trait) || null : null,
+  }));
+
+  render();
+  renderRoundTrack();
+  updateTurnUI();
+
+  // Show lock overlay if it's not our turn
+  const myTurn = GS.currentPlayerIdx === MP.localSlot;
+  document.getElementById('net-lock').classList.toggle('show', !myTurn && !GS.gameOver);
+  const turnerName = GS.players[GS.currentPlayerIdx]?.name || '?';
+  const lockEl = document.getElementById('net-lock-name');
+  if (lockEl) lockEl.textContent = turnerName;
+}
+
+/* Broadcast full game state from host to all clients */
+function mpBroadcastState() {
+  if (!MP.active || !MP.isHost) return;
+  mpHostBroadcast({ type:'state', gs: mpSerialiseGS() });
+}
+
+/* ─────────────────────────────────────────────
+   REMOTE ACTION EXECUTION (host side)
+   Client sends { type:'action', action, cid?, sid? }
+   Host executes, then broadcasts new state
+───────────────────────────────────────────── */
+function mpExecuteRemoteAction(data, slotIdx) {
+  // Temporarily set currentPlayerIdx to the remote player's slot
+  // so action functions work correctly
+  const prevIdx = GS.currentPlayerIdx;
+  GS.currentPlayerIdx = slotIdx;
+  const p = GS.players[slotIdx];
+  if (!p || p.actionsLeft <= 0) { GS.currentPlayerIdx = prevIdx; return; }
+
+  switch (data.action) {
+    case 'acquire': {
+      const c = GS.companies.find(x => x.id === data.cid);
+      if (c && c.ownerId === null && p.cash >= c.baseValue) {
+        p.cash -= c.baseValue; c.ownerId = slotIdx; p.actionsLeft--;
+        glog(`${p.name} acquired ${c.name}`, 'info');
+        updateRegionControl(); updateStockPrices();
+      }
+      break;
+    }
+    case 'upgrade': {
+      const c = GS.companies.find(x => x.id === data.cid);
+      if (c && c.ownerId === slotIdx && applyUpgrade(c)) { p.actionsLeft--; updateStockPrices(); }
+      break;
+    }
+    case 'sell': {
+      const c = GS.companies.find(x => x.id === data.cid);
+      if (c && c.ownerId === slotIdx) {
+        const sp = calcSellPrice(c);
+        p.cash += sp; c.ownerId = null; c.upgrades = 0; c.level = 1; c.revenue = c.initRevenue;
+        p.actionsLeft--;
+        glog(`${p.name} sold ${c.name} for $${sp}`, 'warn');
+        updateRegionControl(); updateStockPrices();
+      }
+      break;
+    }
+    case 'takeover': {
+      const c = GS.companies.find(x => x.id === data.cid);
+      if (c && c.ownerId !== null && c.ownerId !== slotIdx) {
+        const tk = calcTakeover(slotIdx, c);
+        if (p.cash >= tk.cost) {
+          p.cash -= tk.cost; p.actionsLeft--; GS.stats.toa[slotIdx]++;
+          const def = GS.players[c.ownerId];
+          const fp  = def.fortified ? 0.15 : 0; if(def.fortified) def.fortified=false;
+          const ep  = Math.max(0.05, tk.P - fp);
+          const roll = Math.random();
+          if (roll <= ep) { c.ownerId = slotIdx; GS.stats.tos[slotIdx]++; glog(`${p.name} ⚔ captured ${c.name}`, 'warn'); }
+          else { const ret=Math.floor(tk.cost*.5); c.failedTakeoversAgainst++; setTimeout(()=>{p.cash+=ret; mpBroadcastState();},1900); glog(`${p.name} takeover failed: ${c.name}`, 'info'); }
+          updateRegionControl(); updateStockPrices();
+        }
+      }
+      break;
+    }
+    case 'stockBuy': {
+      const s = GS.sectors[data.sid];
+      const cost = s.price - p.ceo.stockBonus;
+      if (s && s.sharesLeft > 0 && p.cash >= cost) {
+        p.cash -= cost; p.stocks[data.sid]=(p.stocks[data.sid]||0)+1; s.sharesLeft--; s.demand++; p.actionsLeft--;
+        updateStockPrices();
+      }
+      break;
+    }
+    case 'stockSell': {
+      const s = GS.sectors[data.sid];
+      if (s && p.stocks[data.sid] > 0) {
+        p.cash += s.price; p.stocks[data.sid]--; s.sharesLeft++; s.demand=Math.max(0,s.demand-1); p.actionsLeft--;
+        updateStockPrices();
+      }
+      break;
+    }
+    case 'endTurn': {
+      GS.currentPlayerIdx = prevIdx; // restore before endTurn logic
+      mpEndTurnForSlot(slotIdx);
+      mpBroadcastState();
+      return;
+    }
+  }
+
+  GS.currentPlayerIdx = prevIdx;
+  render();
+  mpBroadcastState();
+}
+
+/* End-of-turn handling for a remote human player */
+async function mpEndTurnForSlot(slotIdx) {
+  // Advance to next human or AI
+  let nextIdx = (slotIdx + 1) % GS.players.length;
+  GS.currentPlayerIdx = nextIdx;
+  // Run AI turns for any AI slots
+  while (nextIdx < GS.players.length && !GS.players[nextIdx].isHuman) {
+    await runAITurn(nextIdx);
+    nextIdx++;
+  }
+  if (nextIdx >= GS.players.length) {
+    endRound(); // all players done — triggers endRound which broadcasts
+  } else {
+    GS.currentPlayerIdx = nextIdx;
+    render(); updateTurnUI();
+    mpBroadcastState();
+  }
+}
+
+/* ── Client: send action to host ── */
+function mpSendAction(data) {
+  if (!MP.active || MP.isHost) return false;
+  if (GS.currentPlayerIdx !== MP.localSlot) return false;
+  if (MP.hostConn?.open) { MP.hostConn.send({ type:'action', ...data }); return true; }
+  return false;
+}
+
+/* ── Client: send end turn ── */
+function mpSendEndTurn() {
+  if (!MP.active || MP.isHost) return false;
+  if (GS.currentPlayerIdx !== MP.localSlot) return false;
+  if (MP.hostConn?.open) { MP.hostConn.send({ type:'action', action:'endTurn' }); return true; }
+  return false;
+}
+
+/* ── Leave lobby ── */
+function mpLeaveLobby() {
+  MP.peer?.destroy();
+  MP.active = false; MP.peer = null; MP.conns = {}; MP.hostConn = null;
+  document.getElementById('lobby-overlay').classList.remove('show');
+  document.getElementById('setup-overlay').style.display = 'flex';
+}
+
+/* ─────────────────────────────────────────────
+   PATCH EXISTING FUNCTIONS FOR ONLINE AWARENESS
+   Intercept human action executors to route through
+   MP.sendAction when in online mode as a client
+───────────────────────────────────────────── */
+
+/* Wrap doAcquire */
+const _doAcquire = doAcquire;
+doAcquire = function(cid) {
+  if (MP.active && !MP.isHost) { closeModal(); mpSendAction({action:'acquire',cid}); clearAction(); return; }
+  _doAcquire(cid);
+  if (MP.active && MP.isHost) mpBroadcastState();
+};
+
+/* Wrap doUpgrade */
+const _doUpgrade = doUpgrade;
+doUpgrade = function(cid) {
+  if (MP.active && !MP.isHost) { closeModal(); mpSendAction({action:'upgrade',cid}); clearAction(); return; }
+  _doUpgrade(cid);
+  if (MP.active && MP.isHost) mpBroadcastState();
+};
+
+/* Wrap doSell */
+const _doSell = doSell;
+doSell = function(cid) {
+  if (MP.active && !MP.isHost) { closeModal(); mpSendAction({action:'sell',cid}); clearAction(); return; }
+  _doSell(cid);
+  if (MP.active && MP.isHost) mpBroadcastState();
+};
+
+/* Wrap doTakeover */
+const _doTakeover = doTakeover;
+doTakeover = function(cid, cost, prob) {
+  if (MP.active && !MP.isHost) { closeModal(); mpSendAction({action:'takeover',cid}); clearAction(); return; }
+  _doTakeover(cid, cost, prob);
+  if (MP.active && MP.isHost) mpBroadcastState();
+};
+
+/* Wrap doStockBuy */
+const _doStockBuy = doStockBuy;
+doStockBuy = function(sid) {
+  if (MP.active && !MP.isHost) { mpSendAction({action:'stockBuy',sid}); return; }
+  _doStockBuy(sid);
+  if (MP.active && MP.isHost) mpBroadcastState();
+};
+
+/* Wrap doStockSell */
+const _doStockSell = doStockSell;
+doStockSell = function(sid) {
+  if (MP.active && !MP.isHost) { mpSendAction({action:'stockSell',sid}); return; }
+  _doStockSell(sid);
+  if (MP.active && MP.isHost) mpBroadcastState();
+};
+
+/* Wrap endTurn */
+const _endTurn = endTurn;
+endTurn = async function() {
+  if (MP.active && !MP.isHost) { mpSendEndTurn(); return; }
+  await _endTurn();
+  if (MP.active && MP.isHost) mpBroadcastState();
+};
+
+/* Guard handleCompanyClick — block if not our turn in online mode */
+const _handleCompanyClick = handleCompanyClick;
+handleCompanyClick = function(cid) {
+  if (MP.active && GS.currentPlayerIdx !== MP.localSlot) {
+    setInfo('⏳ Not your turn — wait for other players.'); return;
+  }
+  _handleCompanyClick(cid);
+};
+
+
+
+/* ──────────────────── MAIN ──────────────────── */
+
+/* ═══════════════════════════════════════════
+   CORPORATE DOMINION v7 — MAIN / BOOT
+   Runs after all other scripts loaded.
+   Sets up: dock btn actions, action state sync,
+   auto-end timer, init setup screen.
+═══════════════════════════════════════════ */
+
+/* ── Dock button active state sync ── */
+const DOCK_ACTIONS = {
+  'acquire': 'btn-acquire', 'upgrade': 'btn-upgrade',
+  'takeover': 'btn-takeover', 'sell': 'btn-sell',
+};
+
+/* Patch setAction to update dock button styling */
+const _setAction_orig = setAction;
+setAction = function(action) {
+  _setAction_orig(action);
+  Object.entries(DOCK_ACTIONS).forEach(([a, id]) => {
+    const btn = document.getElementById(id);
+    if (btn) btn.classList.toggle('active', a === GS.selectedAction);
+  });
+};
+
+/* Patch clearAction to clear dock styling */
+const _clearAction_orig = clearAction;
+clearAction = function() {
+  _clearAction_orig();
+  Object.values(DOCK_ACTIONS).forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.classList.remove('active');
+  });
+};
+
+/* ── Auto-end toast ── */
+function showAutoEndToast() {
+  const t = document.getElementById('auto-end-toast');
+  if (!t) return;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1100);
+}
+
+/* Patch clearAction to trigger auto-end when actions run out */
+const _clearAction_ae = clearAction;
+clearAction = function() {
+  _clearAction_ae();
+  if (GS.gameOver || GS.currentPlayerIdx !== 0) return;
+  const p = GS.players[0];
+  if (p && p.actionsLeft <= 0) {
+    showAutoEndToast();
+    setTimeout(() => { if (GS.currentPlayerIdx === 0 && p.actionsLeft <= 0) endTurn(); }, 1100);
+  }
+};
+
+/* ── Drawer backdrop (mobile) ── */
+const backdrop = document.createElement('div');
+backdrop.id = 'drawer-backdrop';
+backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:299;display:none;';
+backdrop.onclick = () => {
+  document.getElementById('left').classList.remove('drawer-open');
+  backdrop.style.display = 'none';
+};
+document.body.appendChild(backdrop);
+
+const _toggleLeft_orig = toggleLeft;
+toggleLeft = function() {
+  _toggleLeft_orig();
+  if (window.innerWidth <= 640) {
+    backdrop.style.display = document.getElementById('left').classList.contains('drawer-open') ? 'block' : 'none';
+  }
+};
+
+/* ── Stock buy/sell wrappers (keeps render in sync) ── */
+const _doStockBuy_orig  = doStockBuy;
+const _doStockSell_orig = doStockSell;
+doStockBuy  = function(sid) { _doStockBuy_orig(sid);  renderRightSidebar(); };
+doStockSell = function(sid) { _doStockSell_orig(sid); renderRightSidebar(); };
+
+/* ── Takeover calc: shown in handleCompanyClick modal, no separate panel needed ── */
+
+/* ── Boot ── */
+buildBonusPreview(2); // default 1v1 preview
+
+// Ensure setup overlay is showing on load
+document.getElementById('setup-overlay').style.display = '';
+</script>
+</body>
+</html>
