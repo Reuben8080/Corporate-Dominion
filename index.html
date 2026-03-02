@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Corporate Dominion</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏢</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="game.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     SETUP SCREEN
+══════════════════════════════════════════ -->
+<div id="setup-overlay">
+  <div class="setup-box">
+    <div class="setup-logo">
+      <div class="setup-logo-icon">CD</div>
+      <div>
+        <div class="setup-logo-title">Corporate Dominion</div>
+        <div class="setup-logo-sub">BUILD AN EMPIRE · CRUSH YOUR RIVALS</div>
+      </div>
+    </div>
+
+    <div class="setup-tabs">
+      <div class="setup-tab active" id="stab-solo"   onclick="setupTab('solo')">🤖 vs AI</div>
+      <div class="setup-tab"        id="stab-online" onclick="setupTab('online')">🌐 Online</div>
+    </div>
+
+    <!-- SOLO PANE -->
+    <div class="setup-pane active" id="spane-solo">
+      <div class="setup-sect">Game Mode</div>
+      <div class="mode-grid">
+        <div class="mode-card sel" id="mode-1v1" onclick="selectMode(1)">
+          <div class="mc-icon">⚔️</div>
+          <div class="mc-title">1 vs 1</div>
+          <div class="mc-desc">You vs 1 AI rival.<br>Fast &amp; intense.</div>
+        </div>
+        <div class="mode-card" id="mode-1v3" onclick="selectMode(3)">
+          <div class="mc-icon">🏆</div>
+          <div class="mc-title">1 vs 3</div>
+          <div class="mc-desc">Full 4-player chaos.<br>Classic mode.</div>
+        </div>
+      </div>
+      <div class="setup-sect">Your Startup Bonus</div>
+      <div class="bonus-list" id="bonus-preview"></div>
+      <div class="tut-row">
+        <input type="checkbox" id="tut-check" checked>
+        <label for="tut-check">Show interactive tutorial</label>
+      </div>
+      <button class="start-btn" onclick="startGame()">▶ Begin Game</button>
+    </div>
+
+    <!-- ONLINE PANE -->
+    <div class="setup-pane" id="spane-online">
+      <div class="setup-sect">Create or join a room — up to 4 players</div>
+      <div class="mode-grid">
+        <div class="mode-card sel" id="mp-host-card" onclick="mpSelectRole('host')">
+          <div class="mc-icon">👑</div>
+          <div class="mc-title">Host Room</div>
+          <div class="mc-desc">Create a room &amp;<br>share the code.</div>
+        </div>
+        <div class="mode-card" id="mp-join-card" onclick="mpSelectRole('join')">
+          <div class="mc-icon">🔗</div>
+          <div class="mc-title">Join Room</div>
+          <div class="mc-desc">Enter a 6-letter<br>room code.</div>
+        </div>
+      </div>
+      <div id="mp-join-row" class="join-row" style="display:none">
+        <input class="room-input" id="mp-code-input" maxlength="6" placeholder="ROOM CODE"
+               oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+      </div>
+      <div class="tut-row">
+        <input type="checkbox" id="tut-check-mp" checked>
+        <label for="tut-check-mp">Show tutorial</label>
+      </div>
+      <button class="start-btn" onclick="mpConnect()">🌐 Connect to Room</button>
+      <div class="setup-note">
+        Peer-to-peer WebRTC via PeerJS · Deploy index.html + game.css + game.js to
+        Netlify or GitHub Pages and share the URL. Unfilled slots become AI opponents.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOBBY -->
+<div id="lobby-overlay">
+  <div class="lobby-box">
+    <div class="lobby-title" id="lobby-title">Game Lobby</div>
+    <div class="lobby-sub"   id="lobby-sub">Waiting for players…</div>
+    <div class="room-code-block" id="lobby-code-block">
+      <div class="room-code-lbl">Room Code — share with friends</div>
+      <div class="room-code-val" id="lobby-code" onclick="mpCopyCode()" title="Click to copy">——</div>
+      <div class="room-code-hint">Tap to copy · Friends enter this in Join Room</div>
+    </div>
+    <div class="lobby-slots" id="lobby-slots"></div>
+    <div class="lobby-status">
+      <div class="lobby-dot connecting" id="lobby-dot"></div>
+      <span id="lobby-status-txt">Initialising…</span>
+    </div>
+    <div class="lobby-btns">
+      <button class="lobby-btn pri"   id="lobby-start-btn" onclick="mpStartGame()" disabled>▶ Start Game</button>
+      <button class="lobby-btn ghost" onclick="mpLeaveLobby()">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     GAME SHELL
+══════════════════════════════════════════ -->
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div id="logo">
+    <div class="logo-icon">CD</div>
+    <div class="logo-text-wrap">
+      <div class="logo-title">CORPORATE DOMINION</div>
+      <div class="logo-sub" id="logo-sub">ROUND 1/6 · 3 ACTIONS</div>
+    </div>
+  </div>
+  <div id="market-status">
+    MARKET: <span id="phase-label">STABLE</span>
+  </div>
+  <div id="round-track" style="display:flex;gap:4px;align-items:center;flex-shrink:0"></div>
+  <div class="topbar-right">
+    <button class="icon-btn" onclick="toggleLeft()"    title="Players">☰</button>
+    <button class="icon-btn" id="snd-btn" onclick="showSoundMenu()" title="Sound">🔊</button>
+    <button class="icon-btn" onclick="showRulebook()"  title="Rules">?</button>
+  </div>
+</div>
+
+<!-- PLAYER STRIP (mobile — filled by renderPlayerHUD) -->
+<div id="player-strip"></div>
+
+<!-- MAIN LAYOUT -->
+<div id="main">
+
+  <!-- LEFT: Players + Log -->
+  <div id="left">
+    <div class="sidebar-hdr">
+      <span class="sidebar-hdr-icon">👥</span> PLAYERS
+      <span class="sidebar-count" id="player-count">4/4</span>
+    </div>
+    <div id="player-list"></div>
+    <div class="sidebar-hdr log-hdr">
+      <span class="sidebar-hdr-icon">📋</span> SYSTEM LOG
+    </div>
+    <div id="log-wrap"><div id="log-area"></div></div>
+  </div>
+
+  <!-- CENTER: Board + Action Dock -->
+  <div id="center">
+    <div id="info-strip">Select an action, then tap a company.</div>
+    <div id="event-bar"></div>
+    <div id="board">
+      <!-- Regions injected by renderMap() -->
+    </div>
+
+    <!-- Floating Action Dock -->
+    <div id="action-dock">
+      <div id="actions-pill">
+        <span class="ap-bolt">⚡</span>
+        <span id="ap-count">3</span> ACTIONS REMAINING
+      </div>
+      <div id="dock-btns">
+        <button class="dock-btn" id="btn-acquire"  onclick="setAction('acquire')">
+          <div class="dock-num">1</div>
+          <div class="dock-icon">$</div>
+          <div class="dock-lbl">ACQUIRE</div>
+        </button>
+        <button class="dock-btn" id="btn-upgrade"  onclick="setAction('upgrade')">
+          <div class="dock-num">2</div>
+          <div class="dock-icon">⬆</div>
+          <div class="dock-lbl">UPGRADE</div>
+        </button>
+        <button class="dock-btn" id="btn-takeover" onclick="setAction('takeover')">
+          <div class="dock-num">3</div>
+          <div class="dock-icon">⚔</div>
+          <div class="dock-lbl">TAKEOVER</div>
+        </button>
+        <button class="dock-btn" id="btn-card"     onclick="showCardMenu()">
+          <div class="dock-num">4</div>
+          <div class="dock-icon">🃏</div>
+          <div class="dock-lbl">CARD</div>
+        </button>
+        <button class="dock-btn" id="btn-sell"     onclick="setAction('sell')">
+          <div class="dock-num">S</div>
+          <div class="dock-icon">📈</div>
+          <div class="dock-lbl">SELL</div>
+        </button>
+        <button class="dock-btn" id="btn-pass"     onclick="passAction()">
+          <div class="dock-num">P</div>
+          <div class="dock-icon">⊘</div>
+          <div class="dock-lbl">PASS</div>
+        </button>
+      </div>
+      <button class="end-turn-btn" id="end-turn-btn" onclick="endTurn()">End Turn ›</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: CEO + Intel + Stocks + Cards -->
+  <div id="right">
+    <div class="sidebar-hdr">
+      <span class="sidebar-hdr-icon">👤</span> EXECUTIVE PROFILE
+    </div>
+    <div id="ceo-disp"></div>
+
+    <div class="sidebar-hdr">
+      <span class="sidebar-hdr-icon">📡</span> INTEL &amp; MARKETS
+    </div>
+    <div id="intel-area"></div>
+
+    <div class="sidebar-hdr hand-hdr">
+      <span class="sidebar-hdr-icon">🃏</span> HAND
+      <span id="hand-count" class="hand-badge">2</span>
+    </div>
+    <div id="cards-area"></div>
+  </div>
+
+</div><!-- /#main -->
+
+<!-- ══════════════════════════════════════════
+     OVERLAYS
+══════════════════════════════════════════ -->
+
+<!-- Modal -->
+<div id="modal-overlay">
+  <div id="modal">
+    <div class="modal-hdr">
+      <h2 id="modal-title"></h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- Dice / Takeover resolve -->
+<div id="dice-overlay">
+  <div class="dice-box">
+    <div class="dice-title">⚔ HOSTILE TAKEOVER</div>
+    <div class="dice-target" id="dice-target"></div>
+    <div class="dice-need"   id="dice-need"></div>
+    <div class="dice-num"    id="dice-num">0.000</div>
+    <div class="dice-result" id="dice-result"></div>
+  </div>
+</div>
+
+<!-- Phase Announce -->
+<div id="phase-announce">
+  <div class="pa-inner">
+    <div class="pa-round">ROUND <span id="pa-round">1</span></div>
+    <div class="pa-phase" id="pa-name">STABLE</div>
+    <div class="pa-effect" id="pa-effect"></div>
+    <div class="pa-event"  id="pa-event"></div>
+    <div class="pa-progress"><div class="pa-pfill" id="pa-pfill"></div></div>
+    <button class="pa-dismiss" onclick="dismissPhase()">Understood ›</button>
+  </div>
+</div>
+
+<!-- Tutorial -->
+<div id="tut-overlay">
+  <div id="tut-spot"></div>
+  <div class="tut-card" id="tut-card">
+    <div class="tut-meta">
+      <span id="tut-step">Step 1</span>
+      <div id="tut-dots"></div>
+    </div>
+    <div class="tut-title" id="tut-title"></div>
+    <div class="tut-body"  id="tut-body"></div>
+    <div class="tut-nav">
+      <button class="tut-btn ghost" id="tut-prev" onclick="tutNav(-1)">‹ Back</button>
+      <button class="tut-btn pri"   id="tut-next" onclick="tutNav(1)">Next ›</button>
+    </div>
+  </div>
+  <button class="tut-skip" onclick="skipTutorial()">Skip tutorial</button>
+</div>
+
+<!-- AI thinking overlay (inside board) -->
+<div id="ai-overlay" class="ai-overlay-global">
+  <div class="ai-lbl" id="ai-lbl">AI THINKING…</div>
+</div>
+
+<!-- Auto-end + Net lock toasts -->
+<div id="auto-end-toast">✓ All actions used — ending turn…</div>
+<div id="net-lock">⏳ Waiting for <span id="net-lock-name">opponent</span>…</div>
+
+<!-- PeerJS + Game -->
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
