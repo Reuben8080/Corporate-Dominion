@@ -281,6 +281,8 @@ function updateTurnUI() {
   const human = isMyTurn();
   const endBtn = document.getElementById('end-turn-btn');
   if (endBtn) { endBtn.disabled = !human; }
+  const mobEnd = document.getElementById('mobile-end-turn');
+  if (mobEnd) { mobEnd.disabled = !human; }
   const dock = document.getElementById('action-dock');
   if (dock) {
     dock.style.opacity       = human ? '1' : '0.38';
@@ -288,7 +290,6 @@ function updateTurnUI() {
     dock.classList.toggle('player-turn', human);
   }
   // Net lock overlay: show only in MP when a HUMAN opponent is playing
-  // (don't show on host while the host's own AI is running)
   const lock = document.getElementById('net-lock');
   if (lock) {
     const currentPlayer = GS.players[GS.currentPlayerIdx];
