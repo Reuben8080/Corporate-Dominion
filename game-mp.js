@@ -336,7 +336,7 @@ function mpBeginGameAsHost(data) {
   mpBroadcastState(); // send initial state to all clients
   // Show chat
   const chatBtn = document.getElementById('chat-btn');
-  const chatFab = document.getElementById('chat-fab'); if (chatBtn) { chatBtn.style.display = 'flex'; chatBtn.classList.add('mp-active'); } if (chatFab) chatFab.style.display = 'flex';
+  if (chatBtn) { chatBtn.style.display = 'flex'; chatBtn.classList.add('mp-active'); }
   mpChatSystem('=== ONLINE GAME STARTED ===');
   mpChatSystem('💬 Tap the 💬 button (top-right) to negotiate with opponents!');
   if (data.tutCheck) startTutorial(); else showPhaseAnnounce();
@@ -349,7 +349,7 @@ function mpClientBeginGame(data) {
   setInfo('⏳ Waiting for host to send game state…');
   // Show chat button
   const chatBtn = document.getElementById('chat-btn');
-  const chatFab = document.getElementById('chat-fab'); if (chatBtn) { chatBtn.style.display = 'flex'; chatBtn.classList.add('mp-active'); } if (chatFab) chatFab.style.display = 'flex';
+  if (chatBtn) { chatBtn.style.display = 'flex'; chatBtn.classList.add('mp-active'); }
   // If host already sent state before this callback fired, request resend
   if (MP.hostConn && MP.hostConn.open) {
     MP.hostConn.send({ type: 'requestState' });
@@ -424,7 +424,7 @@ function mpApplyState(gs) {
   document.querySelectorAll('.leave-sidebar-btn').forEach(b => b.style.display = 'flex');
   // Always ensure chat button is visible (covers case where client missed 'start' packet)
   const chatBtn = document.getElementById('chat-btn');
-  const chatFab = document.getElementById('chat-fab'); if (chatBtn) { chatBtn.style.display = 'flex'; chatBtn.classList.add('mp-active'); } if (chatFab) chatFab.style.display = 'flex';
+  if (chatBtn) { chatBtn.style.display = 'flex'; chatBtn.classList.add('mp-active'); }
 
   // Restore companies (with trait objects)
   GS.companies = gs.companies.map(c => ({
@@ -636,14 +636,14 @@ let _chatOpen   = false;
 
 function toggleChat() {
   _chatOpen = !_chatOpen;
-  const panel = document.getElementById('chat-panel');
+  const panel    = document.getElementById('chat-panel');
+  const backdrop = document.getElementById('chat-backdrop');
   if (panel) panel.classList.toggle('open', _chatOpen);
+  if (backdrop) backdrop.classList.toggle('show', _chatOpen);
   if (_chatOpen) {
     _chatUnread = 0;
     const badge = document.getElementById('chat-unread');
     if (badge) { badge.textContent = ''; badge.classList.remove('show'); }
-    const fabBadge = document.getElementById('chat-fab-badge');
-    if (fabBadge) { fabBadge.textContent = ''; fabBadge.classList.remove('show'); }
     const msgs = document.getElementById('chat-messages');
     if (msgs) msgs.scrollTop = msgs.scrollHeight;
     setTimeout(() => document.getElementById('chat-input')?.focus(), 120);
@@ -720,14 +720,12 @@ function mpRenderChatMsg(data) {
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
 
-  // Badge both the topbar button and the FAB if panel is closed
+  // Badge the topbar chat button if panel is closed
   if (!_chatOpen) {
     _chatUnread++;
     const n = _chatUnread > 9 ? '9+' : _chatUnread;
     const badge = document.getElementById('chat-unread');
     if (badge) { badge.textContent = n; badge.classList.add('show'); }
-    const fabBadge = document.getElementById('chat-fab-badge');
-    if (fabBadge) { fabBadge.textContent = n; fabBadge.classList.add('show'); }
     if (!isMine) {
       setInfo(`💬 <b style="color:${data.color}">${data.name}</b>: ${escapeHtml(data.text)}`);
     }
