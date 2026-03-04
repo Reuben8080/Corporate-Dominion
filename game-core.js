@@ -92,7 +92,7 @@ const GS = {
 const MP = {
   active:   false,
   isHost:   false,
-  role:     'solo',
+  role:     'host',
   peer:     null,
   conns:    {},
   hostConn: null,
@@ -332,7 +332,9 @@ async function endTurn() {
   SFX.endTurn();
   GS.currentPlayerIdx = 1;
   clearAction(); updateTurnUI();
-  for (let ai = 1; ai < GS.players.length; ai++) await runAITurn(ai);
+  for (let ai = 1; ai < GS.players.length; ai++) {
+    if (!GS.players[ai].isHuman) await runAITurn(ai);
+  }
   endRound();
 }
 
