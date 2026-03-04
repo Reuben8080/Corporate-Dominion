@@ -58,6 +58,9 @@ function mpConnect() {
   const role = MP.role;
   if (!role || role === 'solo') { alert('Select Host or Join first.'); return; }
 
+  const rawName = document.getElementById('mp-name-input')?.value?.trim().toUpperCase() || '';
+  MP.playerName = rawName.replace(/[^A-Z0-9]/g,'').slice(0,8) || (role === 'host' ? 'HOST' : 'PLAYER');
+
   if (role === 'join') {
     const code = document.getElementById('mp-code-input').value.trim().toUpperCase();
     if (code.length !== 6) { alert('Enter a 6-character room code.'); return; }
@@ -77,6 +80,7 @@ function mpConnect() {
   document.getElementById('lobby-code-block').style.display = MP.isHost ? 'block' : 'none';
 
   if (MP.isHost) {
+    MP.slots[0].name = MP.playerName;
     document.getElementById('lobby-title').textContent = 'Your Room';
     document.getElementById('lobby-sub').textContent   = 'Share the code below — up to 3 friends can join';
     mpInitHost();
@@ -92,7 +96,7 @@ function mpConnect() {
 ───────────────────────────────────────────── */
 function mpInitHost() {
   MP.localSlot = 0;
-  MP.slots[0]  = { name:'YOU (Host)', filled:true, ready:true, peerId:null, isLocal:true };
+  MP.slots[0]  = { name: MP.playerName || 'HOST', filled:true, ready:true, peerId:null, isLocal:true };
   setLobbyStatus('connecting', 'Opening connection server…');
 
   try {
@@ -141,7 +145,11 @@ function mpInitHost() {
 function mpHostReceive(data, peerId) {
   if (data.type === 'ready') {
     const slot = MP.slots.findIndex(s => s.peerId === peerId);
-    if (slot !== -1) { MP.slots[slot].ready = true; }
+    if (slot !== -1) {
+      MP.slots[slot].ready = true;
+      // Use the name the client sent; fall back to "Player N"
+      if (data.name) MP.slots[slot].name = data.name;
+    }
     mpHostBroadcast({ type:'lobby', slots: MP.slots });
     renderLobby();
     mpCheckStartable();
@@ -216,9 +224,9 @@ function mpInitClient() {
     }
   });
 
-  // Mark self as ready immediately (client has no "ready" button flow — just joins)
+  // Send ready with player name — host uses this to label the slot
   setTimeout(() => {
-    if (MP.hostConn?.open) MP.hostConn.send({ type:'ready' });
+    if (MP.hostConn?.open) MP.hostConn.send({ type:'ready', name: MP.playerName });
   }, 2000);
 }
 
@@ -230,7 +238,8 @@ function mpClientReceive(data) {
   if (data.type === 'assigned') {
     MP.localSlot = data.slot;
     setLobbyStatus('ok', `Joined as Player ${data.slot + 1} — waiting for host to start…`);
-    if (MP.hostConn?.open) MP.hostConn.send({ type:'ready' });
+    // Send ready immediately with our name
+    if (MP.hostConn?.open) MP.hostConn.send({ type:'ready', name: MP.playerName });
   }
   if (data.type === 'lobby') {
     MP.slots = data.slots;
@@ -297,23 +306,23 @@ function mpStartGame() {
 function mpBeginGameAsHost(data) {
   document.getElementById('lobby-overlay').classList.remove('show');
 
-  // Mark non-human slots as AI
+  // Apply human names and flags to PLAYER_DEFS for all slots
   data.humanSlots.forEach((s, i) => {
-    if (i > 0 && PLAYER_DEFS[i]) {
-      PLAYER_DEFS[i].isHuman = s.filled;
-      if (s.filled) PLAYER_DEFS[i].name = s.name || `P${i+1}`;
+    if (PLAYER_DEFS[i]) {
+      PLAYER_DEFS[i].isHuman = s.filled || (i === 0);
+      if (s.filled || i === 0) PLAYER_DEFS[i].name = s.name || (i === 0 ? 'HOST' : `P${i+1}`);
     }
   });
 
-  // Compute how many AI needed
-  const numAI = PLAYER_DEFS.slice(1).filter(p => !p.isHuman).length;
-  // Pad to always have 4 players but correctly flagged
-  const totalAI = 3; // always init 4p, some are human
-  initGameData(totalAI); // inits all 4 player slots
+  const totalAI = 3; // always init 4 player slots
+  initGameData(totalAI);
 
-  // Override isHuman on GS.players
+  // Override names and isHuman on GS.players from final MP.slots state
   GS.players.forEach((p, i) => {
     p.isHuman = MP.slots[i]?.filled ?? (i === 0);
+    if (MP.slots[i]?.filled || i === 0) {
+      p.name = MP.slots[i]?.name || (i === 0 ? 'HOST' : `P${i+1}`);
+    }
   });
 
   // Rebuild bonuses for actual player count (was only built for preview count)
@@ -362,6 +371,8 @@ function mpSerialiseGS() {
     currentEvent: GS.currentEvent ? GS.currentEvent.name : null,
     roundPhasesIdx: GS.roundPhasesIdx,
     stats:        GS.stats,
+    _marketInstability: GS._marketInstability || 0,
+    _skipNextEvent:     GS._skipNextEvent || false,
     players: GS.players.map(p => ({
       id: p.id, name: p.name, color: p.color, isHuman: p.isHuman, style: p.style,
       cash: p.cash, actionsLeft: p.actionsLeft, stocks: p.stocks,
@@ -376,6 +387,8 @@ function mpSerialiseGS() {
 }
 
 function mpApplyState(gs) {
+  const prevRound = GS.round; // track for phase-announce detection
+
   GS.round        = gs.round;
   GS.maxRounds    = gs.maxRounds;
   GS.phaseIdx     = gs.phaseIdx;
@@ -387,6 +400,8 @@ function mpApplyState(gs) {
   GS.stats        = gs.stats;
   GS.sectors      = gs.sectors;
   GS.regions      = gs.regions;
+  GS._marketInstability = gs._marketInstability || 0;
+  GS._skipNextEvent     = gs._skipNextEvent     || false;
 
   // Restore event
   if (gs.currentEvent) {
@@ -402,9 +417,10 @@ function mpApplyState(gs) {
     }),
   }));
 
-  // Ensure overlays are hidden when first state arrives
+  // Ensure overlays are hidden and leave button visible when first state arrives
   document.getElementById('setup-overlay').style.display = 'none';
   document.getElementById('lobby-overlay').classList.remove('show');
+  document.querySelectorAll('.leave-sidebar-btn').forEach(b => b.style.display = 'flex');
 
   // Restore companies (with trait objects)
   GS.companies = gs.companies.map(c => ({
@@ -416,7 +432,15 @@ function mpApplyState(gs) {
   renderRoundTrack();
   updateTurnUI();
 
-  // Show lock overlay if it's not our turn
+  // Show phase announce when a new round starts
+  if (gs.round > prevRound && gs.round > 1) {
+    showPhaseAnnounce();
+  }
+
+  // Show end-game overlay if game just ended
+  if (gs.gameOver && !prevRound) endGame();
+
+  // Show net-lock if not our turn
   const myTurn = GS.currentPlayerIdx === MP.localSlot;
   document.getElementById('net-lock').classList.toggle('show', !myTurn && !GS.gameOver);
   const turnerName = GS.players[GS.currentPlayerIdx]?.name || '?';
@@ -462,7 +486,9 @@ function mpExecuteRemoteAction(data, slotIdx) {
       const c = GS.companies.find(x => x.id === data.cid);
       if (c && c.ownerId === slotIdx) {
         const sp = calcSellPrice(c);
-        p.cash += sp; c.ownerId = null; c.upgrades = 0; c.level = 1; c.revenue = c.initRevenue;
+        p.cash += sp; c.ownerId = null;
+        c.upgrades = 0; c.level = 1; c.revenue = c.initRevenue;
+        c._traitDef = c.trait ? 3 : 0; // restore trait defence on sell
         p.actionsLeft--;
         glog(`${p.name} sold ${c.name} for $${sp}`, 'warn');
         updateRegionControl(); updateStockPrices();
@@ -488,9 +514,11 @@ function mpExecuteRemoteAction(data, slotIdx) {
     }
     case 'stockBuy': {
       const s = GS.sectors[data.sid];
-      const cost = s.price - p.ceo.stockBonus;
+      const cost = s ? s.price - p.ceo.stockBonus : 0;
       if (s && s.sharesLeft > 0 && p.cash >= cost) {
-        p.cash -= cost; p.stocks[data.sid]=(p.stocks[data.sid]||0)+1; s.sharesLeft--; s.demand++; p.actionsLeft--;
+        p.cash -= cost; p.stocks[data.sid]=(p.stocks[data.sid]||0)+1;
+        s.sharesLeft--; s.demand++; p.actionsLeft--;
+        glog(`${p.name} bought ${s.name} @ $${cost}`, 'info');
         updateStockPrices();
       }
       break;
@@ -498,7 +526,9 @@ function mpExecuteRemoteAction(data, slotIdx) {
     case 'stockSell': {
       const s = GS.sectors[data.sid];
       if (s && p.stocks[data.sid] > 0) {
-        p.cash += s.price; p.stocks[data.sid]--; s.sharesLeft++; s.demand=Math.max(0,s.demand-1); p.actionsLeft--;
+        p.cash += s.price; p.stocks[data.sid]--;
+        s.sharesLeft++; s.demand=Math.max(0,s.demand-1); p.actionsLeft--;
+        glog(`${p.name} sold ${s.name} @ $${s.price}`, 'info');
         updateStockPrices();
       }
       break;
@@ -533,19 +563,25 @@ function mpExecuteRemoteAction(data, slotIdx) {
   mpBroadcastState();
 }
 
-/* End-of-turn handling for a remote human player */
+/* End-of-turn handling for any human player (host or client) */
 async function mpEndTurnForSlot(slotIdx) {
-  // Advance to next human or AI
-  let nextIdx = (slotIdx + 1) % GS.players.length;
-  GS.currentPlayerIdx = nextIdx;
-  // Run AI turns for any AI slots
-  while (nextIdx < GS.players.length && !GS.players[nextIdx].isHuman) {
+  const total = GS.players.length;
+  let nextIdx = slotIdx + 1;
+
+  // Run AI turns for any consecutive AI slots
+  while (nextIdx < total && !GS.players[nextIdx].isHuman) {
     await runAITurn(nextIdx);
     nextIdx++;
   }
-  if (nextIdx >= GS.players.length) {
-    endRound(); // all players done — triggers endRound which broadcasts
+
+  if (nextIdx >= total) {
+    // All players have gone — end the round
+    endRound();
+    // Broadcast the new round state to all clients
+    if (MP.active && MP.isHost) mpBroadcastState();
   } else {
+    // Next human player's turn
+    GS.players[nextIdx].actionsLeft = 3;
     GS.currentPlayerIdx = nextIdx;
     render(); updateTurnUI();
     mpBroadcastState();
@@ -758,13 +794,17 @@ if (typeof doTakeover === 'function') {
 if (typeof doStockBuy === 'function') {
   const _doStockBuy = doStockBuy;
   globalThis.doStockBuy = function(sid) {
-    if (MP.active && !MP.isHost) { mpSendAction({action:'stockBuy',sid}); return; }
+    if (MP.active && !MP.isHost) {
+      mpSendAction({action:'stockBuy',sid});
+      closeModal(); // don't leave the stocks modal open while waiting for state
+      return;
+    }
     _doStockBuy(sid);
     if (MP.active && MP.isHost) mpBroadcastState();
   };
 } else {
   globalThis.doStockBuy = function(sid) {
-    if (MP.active && !MP.isHost) { mpSendAction({action:'stockBuy',sid}); return; }
+    if (MP.active && !MP.isHost) { mpSendAction({action:'stockBuy',sid}); closeModal(); return; }
     console.warn('doStockBuy called before core is defined');
   };
 }
@@ -772,13 +812,17 @@ if (typeof doStockBuy === 'function') {
 if (typeof doStockSell === 'function') {
   const _doStockSell = doStockSell;
   globalThis.doStockSell = function(sid) {
-    if (MP.active && !MP.isHost) { mpSendAction({action:'stockSell',sid}); return; }
+    if (MP.active && !MP.isHost) {
+      mpSendAction({action:'stockSell',sid});
+      closeModal();
+      return;
+    }
     _doStockSell(sid);
     if (MP.active && MP.isHost) mpBroadcastState();
   };
 } else {
   globalThis.doStockSell = function(sid) {
-    if (MP.active && !MP.isHost) { mpSendAction({action:'stockSell',sid}); return; }
+    if (MP.active && !MP.isHost) { mpSendAction({action:'stockSell',sid}); closeModal(); return; }
     console.warn('doStockSell called before core is defined');
   };
 }
@@ -787,8 +831,14 @@ if (typeof endTurn === 'function') {
   const _endTurn = endTurn;
   globalThis.endTurn = async function() {
     if (MP.active && !MP.isHost) { mpSendEndTurn(); return; }
+    if (MP.active && MP.isHost) {
+      if (!isMyTurn() || GS.gameOver) return;
+      SFX.endTurn();
+      clearAction(); updateTurnUI();
+      await mpEndTurnForSlot(MP.localSlot);
+      return;
+    }
     await _endTurn();
-    if (MP.active && MP.isHost) mpBroadcastState();
   };
 } else {
   globalThis.endTurn = async function() {
