@@ -228,9 +228,10 @@ function doAcquire(cid) {
 function doUpgrade(cid) {
   closeModal();
   const slot = mySlot();
+  const p = GS.players[slot];
   const c = GS.companies.find(x => x.id === cid);
   if (!applyUpgrade(c)) { glog('Insufficient funds for upgrade.', 'bad'); return; }
-  GS.players[slot].actionsLeft--;
+  p.actionsLeft--;
   SFX.upgrade();
   glog(`${p.name} upgraded ${c.name} → Lv${c.level} (+${c.upgrades} upgrades)`, 'good');
   updateStockPrices(); render(); clearAction();
@@ -329,6 +330,9 @@ function doStockBuy(sid) {
   SFX.buy();
   glog(`${p.name} bought ${s.name} @ $${cost}  (div $${Math.round(s.price / 5)}/round)`, 'good');
   updateStockPrices(); render(); renderRightSidebar();
+  // Refresh modal if still open, otherwise clearAction handles auto-end
+  if (p.actionsLeft > 0) { closeModal(); showStocksModal(); }
+  else { closeModal(); clearAction(); }
 }
 
 function doStockSell(sid) {
@@ -344,6 +348,8 @@ function doStockSell(sid) {
   SFX.sell();
   glog(`${p.name} sold ${s.name} @ $${s.price}`, 'warn');
   updateStockPrices(); render(); renderRightSidebar();
+  if (p.actionsLeft > 0) { closeModal(); showStocksModal(); }
+  else { closeModal(); clearAction(); }
 }
 
 /* ── Tactical cards ── */
