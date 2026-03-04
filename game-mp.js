@@ -336,8 +336,9 @@ function mpBeginGameAsHost(data) {
   mpBroadcastState(); // send initial state to all clients
   // Show chat
   const chatBtn = document.getElementById('chat-btn');
-  if (chatBtn) chatBtn.style.display = 'flex';
+  const chatFab = document.getElementById('chat-fab'); if (chatBtn) { chatBtn.style.display = 'flex'; chatBtn.classList.add('mp-active'); } if (chatFab) chatFab.style.display = 'flex';
   mpChatSystem('=== ONLINE GAME STARTED ===');
+  mpChatSystem('💬 Tap the 💬 button (top-right) to negotiate with opponents!');
   if (data.tutCheck) startTutorial(); else showPhaseAnnounce();
   glog('=== ONLINE GAME STARTED ===', 'phase');
 }
@@ -348,7 +349,7 @@ function mpClientBeginGame(data) {
   setInfo('⏳ Waiting for host to send game state…');
   // Show chat button
   const chatBtn = document.getElementById('chat-btn');
-  if (chatBtn) chatBtn.style.display = 'flex';
+  const chatFab = document.getElementById('chat-fab'); if (chatBtn) { chatBtn.style.display = 'flex'; chatBtn.classList.add('mp-active'); } if (chatFab) chatFab.style.display = 'flex';
   // If host already sent state before this callback fired, request resend
   if (MP.hostConn && MP.hostConn.open) {
     MP.hostConn.send({ type: 'requestState' });
@@ -417,10 +418,13 @@ function mpApplyState(gs) {
     }),
   }));
 
-  // Ensure overlays are hidden and leave button visible when first state arrives
+  // Ensure overlays are hidden and key UI shown when state arrives
   document.getElementById('setup-overlay').style.display = 'none';
   document.getElementById('lobby-overlay').classList.remove('show');
   document.querySelectorAll('.leave-sidebar-btn').forEach(b => b.style.display = 'flex');
+  // Always ensure chat button is visible (covers case where client missed 'start' packet)
+  const chatBtn = document.getElementById('chat-btn');
+  const chatFab = document.getElementById('chat-fab'); if (chatBtn) { chatBtn.style.display = 'flex'; chatBtn.classList.add('mp-active'); } if (chatFab) chatFab.style.display = 'flex';
 
   // Restore companies (with trait objects)
   GS.companies = gs.companies.map(c => ({
@@ -446,6 +450,14 @@ function mpApplyState(gs) {
   const turnerName = GS.players[GS.currentPlayerIdx]?.name || '?';
   const lockEl = document.getElementById('net-lock-name');
   if (lockEl) lockEl.textContent = turnerName;
+
+  // Give the client an info strip cue on their turn
+  if (myTurn && !GS.gameOver) {
+    const myP = GS.players[MP.localSlot];
+    if (myP && myP.actionsLeft > 0) {
+      setInfo(`Your turn — <b style="color:var(--gold)">${myP.actionsLeft} action${myP.actionsLeft !== 1 ? 's' : ''} remaining</b>. Select an action below.`);
+    }
+  }
 }
 
 /* Broadcast full game state from host to all clients */
@@ -460,8 +472,13 @@ function mpBroadcastState() {
    Host executes, then broadcasts new state
 ───────────────────────────────────────────── */
 function mpExecuteRemoteAction(data, slotIdx) {
+  // endTurn must bypass the actionsLeft guard — it's valid even with 0 actions left
+  if (data.action === 'endTurn') {
+    mpEndTurnForSlot(slotIdx);
+    return;
+  }
+
   // Temporarily set currentPlayerIdx to the remote player's slot
-  // so action functions work correctly
   const prevIdx = GS.currentPlayerIdx;
   GS.currentPlayerIdx = slotIdx;
   const p = GS.players[slotIdx];
@@ -488,7 +505,7 @@ function mpExecuteRemoteAction(data, slotIdx) {
         const sp = calcSellPrice(c);
         p.cash += sp; c.ownerId = null;
         c.upgrades = 0; c.level = 1; c.revenue = c.initRevenue;
-        c._traitDef = c.trait ? 3 : 0; // restore trait defence on sell
+        c._traitDef = c.trait ? 3 : 0;
         p.actionsLeft--;
         glog(`${p.name} sold ${c.name} for $${sp}`, 'warn');
         updateRegionControl(); updateStockPrices();
@@ -533,12 +550,6 @@ function mpExecuteRemoteAction(data, slotIdx) {
       }
       break;
     }
-    case 'endTurn': {
-      GS.currentPlayerIdx = prevIdx; // restore before endTurn logic
-      mpEndTurnForSlot(slotIdx);
-      mpBroadcastState();
-      return;
-    }
     case 'pass': {
       if (p.actionsLeft > 0) {
         p.actionsLeft--;
@@ -560,6 +571,7 @@ function mpExecuteRemoteAction(data, slotIdx) {
 
   GS.currentPlayerIdx = prevIdx;
   render();
+  // Always broadcast state immediately so client sees updated actionsLeft
   mpBroadcastState();
 }
 
@@ -630,7 +642,8 @@ function toggleChat() {
     _chatUnread = 0;
     const badge = document.getElementById('chat-unread');
     if (badge) { badge.textContent = ''; badge.classList.remove('show'); }
-    // scroll to bottom
+    const fabBadge = document.getElementById('chat-fab-badge');
+    if (fabBadge) { fabBadge.textContent = ''; fabBadge.classList.remove('show'); }
     const msgs = document.getElementById('chat-messages');
     if (msgs) msgs.scrollTop = msgs.scrollHeight;
     setTimeout(() => document.getElementById('chat-input')?.focus(), 120);
@@ -707,15 +720,14 @@ function mpRenderChatMsg(data) {
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
 
-  // Badge if panel is closed
+  // Badge both the topbar button and the FAB if panel is closed
   if (!_chatOpen) {
     _chatUnread++;
+    const n = _chatUnread > 9 ? '9+' : _chatUnread;
     const badge = document.getElementById('chat-unread');
-    if (badge) {
-      badge.textContent = _chatUnread > 9 ? '9+' : _chatUnread;
-      badge.classList.add('show');
-    }
-    // Flash info strip on non-sender messages
+    if (badge) { badge.textContent = n; badge.classList.add('show'); }
+    const fabBadge = document.getElementById('chat-fab-badge');
+    if (fabBadge) { fabBadge.textContent = n; fabBadge.classList.add('show'); }
     if (!isMine) {
       setInfo(`💬 <b style="color:${data.color}">${data.name}</b>: ${escapeHtml(data.text)}`);
     }
@@ -735,16 +747,25 @@ function escapeHtml(str) {
 /* Wrap/guard action functions so MP can route client actions when needed.
    If the core function doesn't exist yet, provide a safe fallback that still
    routes actions for remote clients. */
+/* ── MP client helper: send action + decrement actionsLeft locally so clearAction works ── */
+function mpClientAction(data) {
+  if (!mpSendAction(data)) return false;
+  // Optimistic local decrement — host will confirm via state broadcast
+  const p = GS.players[MP.localSlot];
+  if (p && p.actionsLeft > 0) p.actionsLeft--;
+  return true;
+}
+
 if (typeof doAcquire === 'function') {
   const _doAcquire = doAcquire;
   globalThis.doAcquire = function(cid) {
-    if (MP.active && !MP.isHost) { closeModal(); mpSendAction({action:'acquire',cid}); clearAction(); return; }
+    if (MP.active && !MP.isHost) { closeModal(); mpClientAction({action:'acquire',cid}); clearAction(); return; }
     _doAcquire(cid);
     if (MP.active && MP.isHost) mpBroadcastState();
   };
 } else {
   globalThis.doAcquire = function(cid) {
-    if (MP.active && !MP.isHost) { closeModal(); mpSendAction({action:'acquire',cid}); clearAction(); return; }
+    if (MP.active && !MP.isHost) { closeModal(); mpClientAction({action:'acquire',cid}); clearAction(); return; }
     console.warn('doAcquire called before core is defined');
   };
 }
@@ -752,13 +773,13 @@ if (typeof doAcquire === 'function') {
 if (typeof doUpgrade === 'function') {
   const _doUpgrade = doUpgrade;
   globalThis.doUpgrade = function(cid) {
-    if (MP.active && !MP.isHost) { closeModal(); mpSendAction({action:'upgrade',cid}); clearAction(); return; }
+    if (MP.active && !MP.isHost) { closeModal(); mpClientAction({action:'upgrade',cid}); clearAction(); return; }
     _doUpgrade(cid);
     if (MP.active && MP.isHost) mpBroadcastState();
   };
 } else {
   globalThis.doUpgrade = function(cid) {
-    if (MP.active && !MP.isHost) { closeModal(); mpSendAction({action:'upgrade',cid}); clearAction(); return; }
+    if (MP.active && !MP.isHost) { closeModal(); mpClientAction({action:'upgrade',cid}); clearAction(); return; }
     console.warn('doUpgrade called before core is defined');
   };
 }
@@ -766,13 +787,13 @@ if (typeof doUpgrade === 'function') {
 if (typeof doSell === 'function') {
   const _doSell = doSell;
   globalThis.doSell = function(cid) {
-    if (MP.active && !MP.isHost) { closeModal(); mpSendAction({action:'sell',cid}); clearAction(); return; }
+    if (MP.active && !MP.isHost) { closeModal(); mpClientAction({action:'sell',cid}); clearAction(); return; }
     _doSell(cid);
     if (MP.active && MP.isHost) mpBroadcastState();
   };
 } else {
   globalThis.doSell = function(cid) {
-    if (MP.active && !MP.isHost) { closeModal(); mpSendAction({action:'sell',cid}); clearAction(); return; }
+    if (MP.active && !MP.isHost) { closeModal(); mpClientAction({action:'sell',cid}); clearAction(); return; }
     console.warn('doSell called before core is defined');
   };
 }
@@ -780,13 +801,13 @@ if (typeof doSell === 'function') {
 if (typeof doTakeover === 'function') {
   const _doTakeover = doTakeover;
   globalThis.doTakeover = function(cid, cost, prob) {
-    if (MP.active && !MP.isHost) { closeModal(); mpSendAction({action:'takeover',cid}); clearAction(); return; }
+    if (MP.active && !MP.isHost) { closeModal(); mpClientAction({action:'takeover',cid}); clearAction(); return; }
     _doTakeover(cid, cost, prob);
     if (MP.active && MP.isHost) mpBroadcastState();
   };
 } else {
   globalThis.doTakeover = function(cid, cost, prob) {
-    if (MP.active && !MP.isHost) { closeModal(); mpSendAction({action:'takeover',cid}); clearAction(); return; }
+    if (MP.active && !MP.isHost) { closeModal(); mpClientAction({action:'takeover',cid}); clearAction(); return; }
     console.warn('doTakeover called before core is defined');
   };
 }
@@ -794,17 +815,13 @@ if (typeof doTakeover === 'function') {
 if (typeof doStockBuy === 'function') {
   const _doStockBuy = doStockBuy;
   globalThis.doStockBuy = function(sid) {
-    if (MP.active && !MP.isHost) {
-      mpSendAction({action:'stockBuy',sid});
-      closeModal(); // don't leave the stocks modal open while waiting for state
-      return;
-    }
+    if (MP.active && !MP.isHost) { mpClientAction({action:'stockBuy',sid}); closeModal(); clearAction(); return; }
     _doStockBuy(sid);
     if (MP.active && MP.isHost) mpBroadcastState();
   };
 } else {
   globalThis.doStockBuy = function(sid) {
-    if (MP.active && !MP.isHost) { mpSendAction({action:'stockBuy',sid}); closeModal(); return; }
+    if (MP.active && !MP.isHost) { mpClientAction({action:'stockBuy',sid}); closeModal(); clearAction(); return; }
     console.warn('doStockBuy called before core is defined');
   };
 }
@@ -812,17 +829,13 @@ if (typeof doStockBuy === 'function') {
 if (typeof doStockSell === 'function') {
   const _doStockSell = doStockSell;
   globalThis.doStockSell = function(sid) {
-    if (MP.active && !MP.isHost) {
-      mpSendAction({action:'stockSell',sid});
-      closeModal();
-      return;
-    }
+    if (MP.active && !MP.isHost) { mpClientAction({action:'stockSell',sid}); closeModal(); clearAction(); return; }
     _doStockSell(sid);
     if (MP.active && MP.isHost) mpBroadcastState();
   };
 } else {
   globalThis.doStockSell = function(sid) {
-    if (MP.active && !MP.isHost) { mpSendAction({action:'stockSell',sid}); closeModal(); return; }
+    if (MP.active && !MP.isHost) { mpClientAction({action:'stockSell',sid}); closeModal(); clearAction(); return; }
     console.warn('doStockSell called before core is defined');
   };
 }
@@ -865,7 +878,7 @@ if (typeof handleCompanyClick === 'function') {
 if (typeof passAction === 'function') {
   const _passAction = passAction;
   globalThis.passAction = function() {
-    if (MP.active && !MP.isHost) { mpSendAction({ action:'pass' }); return; }
+    if (MP.active && !MP.isHost) { mpClientAction({ action:'pass' }); clearAction(); return; }
     _passAction();
     if (MP.active && MP.isHost) mpBroadcastState();
   };
@@ -877,7 +890,7 @@ if (typeof playTacticFromMenu === 'function') {
   globalThis.playTacticFromMenu = function(i) {
     if (MP.active && !MP.isHost) {
       closeModal();
-      mpSendAction({ action:'tactic', idx: i });
+      mpClientAction({ action:'tactic', idx: i });
       clearAction();
       return;
     }
