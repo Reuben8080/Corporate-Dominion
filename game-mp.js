@@ -146,8 +146,17 @@ function mpHostReceive(data, peerId) {
     renderLobby();
     mpCheckStartable();
   }
+  // Client missed the initial state packet — resend
+  if (data.type === 'requestState') {
+    const conn = MP.conns[peerId];
+    if (conn) { try { conn.send({ type:'state', gs: mpSerialiseGS() }); } catch(e){} }
+  }
+  // Chat relay: host receives from client, rebroadcasts to everyone then renders locally
+  if (data.type === 'chat') {
+    mpHostBroadcast(data);      // relay to all other clients
+    mpRenderChatMsg(data);      // show on host screen
+  }
   if (data.type === 'action' && MP.active && GS.currentPlayerIdx === mpSlotForPeer(peerId)) {
-    // Client submitted an action — execute on host then broadcast state
     mpExecuteRemoteAction(data, mpSlotForPeer(peerId));
   }
 }
@@ -233,6 +242,9 @@ function mpClientReceive(data) {
   if (data.type === 'state') {
     mpApplyState(data.gs);
   }
+  if (data.type === 'chat') {
+    mpRenderChatMsg(data);
+  }
 }
 
 /* ─────────────────────────────────────────────
@@ -307,22 +319,27 @@ function mpBeginGameAsHost(data) {
   // Rebuild bonuses for actual player count (was only built for preview count)
   buildBonusPreview(GS.players.length);
   GS.players.forEach((p, i) => startupBonuses[i]?.apply(p));
+  setPhase(1); // must come before updateStockPrices — GS.phase.stockMod is read there
   updateRegionControl();
   updateStockPrices();
-  setPhase(1);
 
   render(); renderRoundTrack();
   mpBroadcastState(); // send initial state to all clients
-
+  // Show chat
+  const chatBtn = document.getElementById('chat-btn');
+  if (chatBtn) chatBtn.style.display = 'flex';
+  mpChatSystem('=== ONLINE GAME STARTED ===');
   if (data.tutCheck) startTutorial(); else showPhaseAnnounce();
   glog('=== ONLINE GAME STARTED ===', 'phase');
 }
 
 function mpClientBeginGame(data) {
-  // Hide both overlays — critical fix: setup was staying visible on client
   document.getElementById('lobby-overlay').classList.remove('show');
   document.getElementById('setup-overlay').style.display = 'none';
   setInfo('⏳ Waiting for host to send game state…');
+  // Show chat button
+  const chatBtn = document.getElementById('chat-btn');
+  if (chatBtn) chatBtn.style.display = 'flex';
   // If host already sent state before this callback fired, request resend
   if (MP.hostConn && MP.hostConn.open) {
     MP.hostConn.send({ type: 'requestState' });
@@ -492,6 +509,23 @@ function mpExecuteRemoteAction(data, slotIdx) {
       mpBroadcastState();
       return;
     }
+    case 'pass': {
+      if (p.actionsLeft > 0) {
+        p.actionsLeft--;
+        glog(`${p.name}: passed action.`, 'info');
+      }
+      break;
+    }
+    case 'tactic': {
+      const t = p.tactics[data.idx];
+      if (t && !t.used && p.actionsLeft > 0) {
+        t.used = true;
+        t.action(p);
+        p.actionsLeft--;
+        updateRegionControl(); updateStockPrices();
+      }
+      break;
+    }
   }
 
   GS.currentPlayerIdx = prevIdx;
@@ -540,6 +574,120 @@ function mpLeaveLobby() {
   MP.active = false; MP.peer = null; MP.conns = {}; MP.hostConn = null;
   document.getElementById('lobby-overlay').classList.remove('show');
   document.getElementById('setup-overlay').style.display = 'flex';
+}
+
+/* ─────────────────────────────────────────────
+   CHAT SYSTEM
+   Host receives from clients → relays to all → renders locally
+   Clients send direct to host
+   Solo players cannot access chat (chat-btn stays hidden)
+───────────────────────────────────────────── */
+
+let _chatUnread = 0;
+let _chatOpen   = false;
+
+function toggleChat() {
+  _chatOpen = !_chatOpen;
+  const panel = document.getElementById('chat-panel');
+  if (panel) panel.classList.toggle('open', _chatOpen);
+  if (_chatOpen) {
+    _chatUnread = 0;
+    const badge = document.getElementById('chat-unread');
+    if (badge) { badge.textContent = ''; badge.classList.remove('show'); }
+    // scroll to bottom
+    const msgs = document.getElementById('chat-messages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+    setTimeout(() => document.getElementById('chat-input')?.focus(), 120);
+  }
+}
+
+function mpSendChat() {
+  if (!MP.active) return;
+  const input = document.getElementById('chat-input');
+  const text  = input?.value?.trim();
+  if (!text) return;
+  input.value = '';
+  const p = GS.players[MP.localSlot];
+  const msg = {
+    type:  'chat',
+    slot:  MP.localSlot,
+    name:  p?.name || `P${MP.localSlot + 1}`,
+    color: p?.color || '#6366f1',
+    text,
+    ts:    Date.now(),
+  };
+  // Host sends to all clients and renders locally
+  // Client sends to host (who relays back to everyone incl. sender)
+  if (MP.isHost) {
+    mpHostBroadcast(msg);
+    mpRenderChatMsg(msg);
+  } else {
+    if (MP.hostConn?.open) MP.hostConn.send(msg);
+    // Optimistic local render so sender sees their message immediately
+    mpRenderChatMsg({ ...msg, _optimistic: true });
+  }
+}
+
+function chatQuick(text) {
+  const input = document.getElementById('chat-input');
+  if (input) input.value = text;
+  mpSendChat();
+}
+
+function mpChatSystem(text) {
+  const msgs = document.getElementById('chat-messages');
+  if (!msgs) return;
+  const div = document.createElement('div');
+  div.className = 'cmsg-sys';
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function mpRenderChatMsg(data) {
+  const msgs = document.getElementById('chat-messages');
+  if (!msgs) return;
+
+  // Deduplicate optimistic renders: if we're a client and get back our own message, skip
+  if (!MP.isHost && data.slot === MP.localSlot && !data._optimistic) {
+    // Find and remove the optimistic copy if it exists
+    const opts = msgs.querySelectorAll('.cmsg.mine.optimistic');
+    opts.forEach(el => el.remove());
+  }
+
+  const isMine = data.slot === MP.localSlot;
+  const d   = new Date(data.ts);
+  const hh  = String(d.getHours()).padStart(2,'0');
+  const mm  = String(d.getMinutes()).padStart(2,'0');
+
+  const div = document.createElement('div');
+  div.className = `cmsg${isMine ? ' mine' : ''}${data._optimistic ? ' optimistic' : ''}`;
+  div.innerHTML = `
+    <div class="cmsg-meta">
+      <span class="cmsg-name" style="color:${data.color}">${data.name}</span>
+      <span class="cmsg-time">${hh}:${mm}</span>
+    </div>
+    <div class="cmsg-text">${escapeHtml(data.text)}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Badge if panel is closed
+  if (!_chatOpen) {
+    _chatUnread++;
+    const badge = document.getElementById('chat-unread');
+    if (badge) {
+      badge.textContent = _chatUnread > 9 ? '9+' : _chatUnread;
+      badge.classList.add('show');
+    }
+    // Flash info strip on non-sender messages
+    if (!isMine) {
+      setInfo(`💬 <b style="color:${data.color}">${data.name}</b>: ${escapeHtml(data.text)}`);
+    }
+  }
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 /* ─────────────────────────────────────────────
@@ -660,5 +808,30 @@ if (typeof handleCompanyClick === 'function') {
   globalThis.handleCompanyClick = function(cid) {
     if (MP.active && GS.currentPlayerIdx !== MP.localSlot) { setInfo('⏳ Not your turn — wait for other players.'); return; }
     console.warn('handleCompanyClick called before core is defined');
+  };
+}
+
+// Wrap passAction — client routes {action:'pass'} to host
+if (typeof passAction === 'function') {
+  const _passAction = passAction;
+  globalThis.passAction = function() {
+    if (MP.active && !MP.isHost) { mpSendAction({ action:'pass' }); return; }
+    _passAction();
+    if (MP.active && MP.isHost) mpBroadcastState();
+  };
+}
+
+// Wrap playTacticFromMenu — client routes {action:'tactic', idx} to host
+if (typeof playTacticFromMenu === 'function') {
+  const _playTacticFromMenu = playTacticFromMenu;
+  globalThis.playTacticFromMenu = function(i) {
+    if (MP.active && !MP.isHost) {
+      closeModal();
+      mpSendAction({ action:'tactic', idx: i });
+      clearAction();
+      return;
+    }
+    _playTacticFromMenu(i);
+    if (MP.active && MP.isHost) mpBroadcastState();
   };
 }
