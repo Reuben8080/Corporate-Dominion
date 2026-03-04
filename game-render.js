@@ -287,14 +287,19 @@ function updateTurnUI() {
     dock.style.pointerEvents = human ? 'auto' : 'none';
     dock.classList.toggle('player-turn', human);
   }
-  // Net lock overlay
+  // Net lock overlay: show only in MP when a HUMAN opponent is playing
+  // (don't show on host while the host's own AI is running)
   const lock = document.getElementById('net-lock');
   if (lock) {
-    if (!human && MP && MP.active) {
-      const p = GS.players[GS.currentPlayerIdx];
-      document.getElementById('net-lock-name').textContent = p.name;
+    const currentPlayer = GS.players[GS.currentPlayerIdx];
+    const isOpponentHuman = currentPlayer && currentPlayer.isHuman;
+    const showLock = !human && MP && MP.active && isOpponentHuman;
+    if (showLock) {
+      document.getElementById('net-lock-name').textContent = currentPlayer.name;
       lock.classList.add('show');
-    } else { lock.classList.remove('show'); }
+    } else {
+      lock.classList.remove('show');
+    }
   }
 }
 
@@ -336,15 +341,19 @@ function showStocksModal() {
   SFX.ui();
   const p = GS.players[mySlot()];
   if (!p) return;
+  const myTurn = isMyTurn();
+  const actLeft = p.actionsLeft;
+  const actColor = actLeft === 0 ? 'var(--red-lt)' : actLeft === 1 ? 'var(--gold-lt)' : 'var(--green-lt)';
   let content = '';
-  content += '<div style="margin-bottom:12px">';
-  content += '<div style="font-family:var(--font-mono);font-size:8px;color:var(--tx-lo);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px">5 Sectors</div>';
+  content += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div style="font-family:var(--font-mono);font-size:8px;color:var(--tx-lo);letter-spacing:.12em;text-transform:uppercase">5 Sectors</div>
+    <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:${actColor}">⚡ ${actLeft} action${actLeft!==1?'s':''} left</div>
+  </div>`;
   GS.sectors.forEach((s, i) => {
     const mine = p.stocks[i] || 0;
     const div = Math.round(s.price / 5);
-    const myTurn = isMyTurn();
-    const canB = myTurn && p.actionsLeft > 0 && p.cash >= (s.price - p.ceo.stockBonus) && s.sharesLeft > 0;
-    const canS = myTurn && p.actionsLeft > 0 && mine > 0;
+    const canB = myTurn && actLeft > 0 && p.cash >= (s.price - p.ceo.stockBonus) && s.sharesLeft > 0;
+    const canS = myTurn && actLeft > 0 && mine > 0;
     const trend = s.growthScore > 3 ? '↑↑ hot' : s.growthScore > 0 ? '↑ active' : s.growthScore < -2 ? '↓↓ cold' : '→ stable';
     const trendColor = s.growthScore > 3 ? 'var(--green-lt)' : s.growthScore > 0 ? 'var(--blue-lt)' : s.growthScore < -2 ? 'var(--red-lt)' : 'var(--tx-md)';
     content += `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
@@ -364,7 +373,6 @@ function showStocksModal() {
   content += '</div>';
   showModal('📊 STOCK MARKET', content);
 }
-
 /* ── CEO Info Modal (Mobile) ── */
 function showCEOInfoModal() {
   SFX.ui();
