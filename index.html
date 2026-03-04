@@ -1130,6 +1130,12 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
     letter-spacing: .05em; touch-action: manipulation;
   }
 
+  /* Replace in-dock end-turn with floating pill on mobile */
+  .end-turn-btn { display: none !important; }
+  #mobile-end-turn { display: block; }
+  /* Chat FAB on mobile: left side so it doesn't cover the end-turn pill */
+  #chat-fab { right: auto; left: 16px; bottom: calc(env(safe-area-inset-bottom, 0px) + 68px); width: 46px; height: 46px; font-size: 19px; }
+
   /* ── BOARD: pad bottom so last cards don't hide under fixed dock ── */
   #board {
     display: grid !important;
@@ -1295,6 +1301,11 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
    NEGOTIATION CHAT PANEL (MP only)
 ═══════════════════════════════════════════ */
 #chat-btn { display: none; position: relative; }
+#chat-btn.mp-active {
+  border-color: rgba(99,102,241,.45);
+  background: rgba(99,102,241,.12);
+  color: var(--indigo-lt);
+}
 .chat-unread {
   position: absolute; top: -3px; right: -3px;
   min-width: 14px; height: 14px; border-radius: 7px;
@@ -1400,20 +1411,72 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
 }
 #chat-send:hover { background: rgba(99,102,241,.28); border-color: var(--indigo-lt); }
 
-/* Mobile chat — bottom sheet */
+/* Mobile chat — bottom sheet sitting ABOVE the dock */
 @media (max-width: 640px) {
   #chat-panel {
-    top: auto; right: 0; left: 0; bottom: 0; width: 100%;
-    height: 56vh; border-left: none; border-top: 1px solid var(--border-l);
+    top: auto; right: 0; left: 0;
+    /* Stop above the action dock so End Turn is always tappable */
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 215px);
+    width: 100%; max-height: 56vh;
+    border-left: none; border-top: 1px solid var(--border-l);
     border-radius: 16px 16px 0 0;
-    transform: translateY(105%);
+    transform: translateY(110%);
   }
   #chat-panel.open { transform: translateY(0); }
   .cq { font-size: 9px; padding: 5px 10px; }
   #chat-input { font-size: 14px; }
+  /* Label the chat button on mobile so it's discoverable */
+  #chat-btn::after {
+    content: 'CHAT'; display: block;
+    font-family: var(--font-mono); font-size: 6px; font-weight: 700;
+    letter-spacing: .06em; color: var(--tx-lo); line-height: 1;
+    margin-top: 1px;
+  }
+  #chat-btn { flex-direction: column; height: auto; padding: 3px 5px; gap: 0; }
 }
 
-/* ── iOS touch fixes ── */
+/* ── Floating Chat FAB (MP) ── */
+#chat-fab {
+  display: none; /* shown by JS when MP starts */
+  position: fixed; right: 16px; bottom: 130px;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: rgba(99,102,241,.18); border: 2px solid rgba(99,102,241,.55);
+  color: var(--indigo-lt); font-size: 22px;
+  box-shadow: 0 4px 20px rgba(99,102,241,.35);
+  z-index: 300; cursor: pointer;
+  transition: all var(--t-fast);
+  animation: chatFabPulse 3s ease-in-out infinite;
+}
+#chat-fab:hover { background: rgba(99,102,241,.3); transform: scale(1.08); }
+@keyframes chatFabPulse {
+  0%,100% { box-shadow: 0 4px 20px rgba(99,102,241,.35); }
+  50% { box-shadow: 0 4px 28px rgba(99,102,241,.65); }
+}
+.chat-fab-badge {
+  position: absolute; top: -4px; right: -4px;
+  min-width: 18px; height: 18px; border-radius: 9px;
+  background: var(--red-lt); color: #fff;
+  font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  display: none; align-items: center; justify-content: center;
+  padding: 0 4px; pointer-events: none;
+}
+.chat-fab-badge.show { display: flex; }
+
+/* ── Mobile floating End Turn (outside dock, always reachable) ── */
+#mobile-end-turn {
+  display: none; /* shown on mobile via media query */
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  transform: translateX(-50%);
+  background: rgba(16,185,129,.15); border: 2px solid rgba(16,185,129,.5);
+  color: var(--green-lt); border-radius: 24px;
+  padding: 12px 40px; font-family: var(--font-ui); font-weight: 800;
+  font-size: 14px; letter-spacing: .05em;
+  box-shadow: 0 4px 20px rgba(16,185,129,.25);
+  z-index: 300; touch-action: manipulation;
+  transition: all var(--t-fast);
+}
+#mobile-end-turn:disabled { opacity: .28; }
+#mobile-end-turn:not(:disabled):active { background: rgba(16,185,129,.3); }
 * { -webkit-tap-highlight-color: transparent; }
 button, [onclick], .setup-tab, .mode-card, .dock-btn, .tcard, .cc, .mbtn, .sab {
   touch-action: manipulation;
@@ -1729,6 +1792,15 @@ button, [onclick], .setup-tab, .mode-card, .dock-btn, .tcard, .cc, .mbtn, .sab {
 <!-- Auto-end + Net lock toasts -->
 <div id="auto-end-toast">✓ All actions used — ending turn…</div>
 <div id="net-lock">⏳ Waiting for <span id="net-lock-name">opponent</span>…</div>
+
+<!-- Floating Chat FAB (MP only — mobile + desktop alternative entry) -->
+<button id="chat-fab" onclick="toggleChat()" title="Negotiation Chat">
+  💬
+  <div id="chat-fab-badge" class="chat-fab-badge"></div>
+</button>
+
+<!-- Mobile floating End Turn button (lives outside dock, always accessible) -->
+<button id="mobile-end-turn" onclick="endTurn()">End Turn ›</button>
 
 <!-- ══════════════════════════════════════════
      CHAT PANEL (MP only — shown via JS)
