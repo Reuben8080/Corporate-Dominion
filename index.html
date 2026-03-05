@@ -369,6 +369,8 @@ body   { display: flex; flex-direction: column; height: 100vh; height: 100dvh; o
   padding: 1px 5px; border-radius: 6px;
 }
 .cc:hover .acq-cost, .cc.hi-acq .acq-cost { opacity: 1; }
+/* Always show acquisition cost on touch devices */
+@media (hover: none) { .acq-cost { opacity: 1; } }
 
 /* ════════════════════════════════════════
    FLOATING ACTION DOCK
@@ -1937,4 +1939,4 @@ button, [onclick], .setup-tab, .mode-card, .dock-btn, .tcard, .cc, .mbtn, .sab {
   </div>
 </div>
 </body>
-</html> 
+</html>
