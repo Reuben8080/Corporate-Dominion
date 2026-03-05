@@ -179,9 +179,16 @@ function mpHostBroadcast(msg) {
 
 function mpCheckStartable() {
   const humanSlots = MP.slots.filter(s => s.filled);
-  const allReady   = humanSlots.every(s => s.ready || s.isLocal);
+  const allReady   = humanSlots.length >= 1 && humanSlots.every(s => s.ready || s.isLocal);
   const btn        = document.getElementById('lobby-start-btn');
+  const info       = document.getElementById('lobby-info');
   if (btn) btn.disabled = !allReady;
+  if (info) {
+    const n = humanSlots.length;
+    info.textContent = n === 1
+      ? 'Waiting for players to join… (or start solo)'
+      : `${n} player${n > 1 ? 's' : ''} connected — ready to start!`;
+  }
 }
 
 /* ─────────────────────────────────────────────
@@ -268,11 +275,11 @@ function renderLobby() {
     if (i === 0 && s.filled) badge = `<div class="lslot-badge host">HOST</div>`;
     else if (s.filled && s.ready) badge = `<div class="lslot-badge ready">READY</div>`;
     else if (s.filled) badge = `<div class="lslot-badge wait">JOINING</div>`;
-    else badge = `<div class="lslot-badge ai">AI BOT</div>`;
-    return `<div class="lslot ${s.filled ? 'filled' : ''}">
+    else badge = `<div class="lslot-badge open">WAITING</div>`;
+    return `<div class="lslot ${s.filled ? 'filled' : 'open-slot'}">
       <div class="lslot-num">${i+1}</div>
-      <div class="lslot-icon">${s.filled ? '🧑' : '🤖'}</div>
-      <div class="lslot-name" style="color:${s.filled ? pColor : 'var(--tx-lo)'}">${s.filled ? s.name : 'Open Slot'}</div>
+      <div class="lslot-icon">${s.filled ? '🧑' : '⏳'}</div>
+      <div class="lslot-name" style="color:${s.filled ? pColor : 'var(--tx-lo)'}">${s.filled ? s.name : 'Waiting for player…'}</div>
       ${badge}
     </div>`;
   }).join('');
@@ -287,15 +294,12 @@ function renderLobby() {
 function mpStartGame() {
   if (!MP.isHost) return;
   const humanCount = MP.slots.filter(s => s.filled).length;
-  const numAI      = 3 - (humanCount - 1); // fill remaining with AI
-  MP.numHumans     = humanCount;
+  MP.numHumans = humanCount;
 
-  // Build player defs: human slots first, AI fill rest
-  // We repurpose PLAYER_DEFS but set isHuman flags per slot
   const startData = {
     type: 'start',
     roomCode: MP.roomCode,
-    numAI,
+    humanCount,
     humanSlots: MP.slots.map((s,i) => ({ slot:i, filled:s.filled, name:s.name })),
     tutCheck: MP.tutCheck,
   };
@@ -306,41 +310,40 @@ function mpStartGame() {
 function mpBeginGameAsHost(data) {
   document.getElementById('lobby-overlay').classList.remove('show');
 
-  // Apply human names and flags to PLAYER_DEFS for all slots
+  const humanCount = data.humanCount || data.humanSlots.filter(s => s.filled).length;
+
+  // Set names on PLAYER_DEFS for the filled slots only
   data.humanSlots.forEach((s, i) => {
-    if (PLAYER_DEFS[i]) {
-      PLAYER_DEFS[i].isHuman = s.filled || (i === 0);
-      if (s.filled || i === 0) PLAYER_DEFS[i].name = s.name || (i === 0 ? 'HOST' : `P${i+1}`);
+    if (s.filled && PLAYER_DEFS[i]) {
+      PLAYER_DEFS[i].isHuman = true;
+      PLAYER_DEFS[i].name    = s.name || (i === 0 ? 'HOST' : `P${i+1}`);
     }
   });
 
-  const totalAI = 3; // always init 4 player slots
-  initGameData(totalAI);
+  // initGameData(n) creates n+1 players — so pass humanCount-1
+  initGameData(humanCount - 1);
 
-  // Override names and isHuman on GS.players from final MP.slots state
+  // Mark every player slot as human and apply correct names
   GS.players.forEach((p, i) => {
-    p.isHuman = MP.slots[i]?.filled ?? (i === 0);
-    if (MP.slots[i]?.filled || i === 0) {
-      p.name = MP.slots[i]?.name || (i === 0 ? 'HOST' : `P${i+1}`);
-    }
+    p.isHuman = true;
+    p.name    = MP.slots[i]?.name || (i === 0 ? 'HOST' : `P${i+1}`);
   });
 
-  // Rebuild bonuses for actual player count (was only built for preview count)
-  buildBonusPreview(GS.players.length);
+  // Rebuild bonuses for this exact player count
+  buildBonusPreview(humanCount);
   GS.players.forEach((p, i) => startupBonuses[i]?.apply(p));
-  setPhase(1); // must come before updateStockPrices — GS.phase.stockMod is read there
+  setPhase(1);
   updateRegionControl();
   updateStockPrices();
 
   render(); renderRoundTrack();
-  mpBroadcastState(); // send initial state to all clients
-  // Show chat
+  mpBroadcastState();
   const chatBtn = document.getElementById('chat-btn');
   if (chatBtn) { chatBtn.style.display = 'flex'; chatBtn.classList.add('mp-active'); }
   mpChatSystem('=== ONLINE GAME STARTED ===');
   mpChatSystem('💬 Tap the 💬 button (top-right) to negotiate with opponents!');
   if (data.tutCheck) startTutorial(); else showPhaseAnnounce();
-  glog('=== ONLINE GAME STARTED ===', 'phase');
+  glog(`=== ONLINE GAME STARTED — ${humanCount} players ===`, 'phase');
 }
 
 function mpClientBeginGame(data) {
@@ -575,24 +578,15 @@ function mpExecuteRemoteAction(data, slotIdx) {
   mpBroadcastState();
 }
 
-/* End-of-turn handling for any human player (host or client) */
+/* End-of-turn: advance to next player. All MP players are human — no AI runner needed. */
 async function mpEndTurnForSlot(slotIdx) {
-  const total = GS.players.length;
-  let nextIdx = slotIdx + 1;
-
-  // Run AI turns for any consecutive AI slots
-  while (nextIdx < total && !GS.players[nextIdx].isHuman) {
-    await runAITurn(nextIdx);
-    nextIdx++;
-  }
+  const total   = GS.players.length;
+  const nextIdx = slotIdx + 1;
 
   if (nextIdx >= total) {
-    // All players have gone — end the round
     endRound();
-    // Broadcast the new round state to all clients
     if (MP.active && MP.isHost) mpBroadcastState();
   } else {
-    // Next human player's turn
     GS.players[nextIdx].actionsLeft = 3;
     GS.currentPlayerIdx = nextIdx;
     render(); updateTurnUI();
