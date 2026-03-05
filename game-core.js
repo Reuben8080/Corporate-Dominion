@@ -570,6 +570,9 @@ function endRound() {
 
   if (GS.round >= GS.maxRounds) { endGame(); return; }
 
+  // Bankruptcy check — after revenue payout, see if anyone is wiped out
+  if (checkBankruptcy()) return;
+
   GS.roundPhasesIdx.push(GS.phaseIdx);
   GS.lastPhaseIdx = GS.phaseIdx;
   GS.round++;
@@ -603,6 +606,111 @@ function rollEvent() {
   }
 }
 
+/* ══════════════════════════════════════════════════════
+   BANKRUPTCY CHECK
+   After each round: if all-but-one player is bankrupt, end early
+   Bankrupt = cash ≤ 0 AND owns no companies
+══════════════════════════════════════════════════════ */
+function isBankrupt(p) {
+  const hasCompanies = GS.companies.some(c => c.ownerId === p.id);
+  const hasStocks    = Object.values(p.stocks || {}).some(q => q > 0);
+  return p.cash <= 0 && !hasCompanies && !hasStocks;
+}
+
+function checkBankruptcy() {
+  if (GS.gameOver) return false;
+  const total   = GS.players.length;
+  const solvent = GS.players.filter(p => !isBankrupt(p));
+  const bankrupt = GS.players.filter(p => isBankrupt(p));
+
+  if (bankrupt.length === 0) return false;
+
+  // Log anyone newly bankrupt
+  bankrupt.forEach(p => {
+    if (!p._declaredBankrupt) {
+      p._declaredBankrupt = true;
+      glog(`💀 ${p.name} has gone bankrupt!`, 'bad');
+    }
+  });
+
+  // End if only 1 player remains solvent (any count), or all but one in 4-player
+  // Rule: game ends when only 1 solvent player remains
+  if (solvent.length <= 1) {
+    setTimeout(() => endGameBankruptcy(solvent[0] || GS.players[0], bankrupt), 600);
+    return true;
+  }
+  return false;
+}
+
+function endGameBankruptcy(winner, losers) {
+  GS.gameOver = true;
+  SFX.gameOver();
+
+  const ov = document.getElementById('endgame-overlay');
+  if (!ov) { endGame(); return; }
+
+  const loserNames = losers.map(p => p.name).join(', ');
+
+  // Confetti burst
+  const burst = () => {
+    const colors = ['#6366f1','#10b981','#f59e0b','#f43f5e','#60a5fa'];
+    for (let i = 0; i < 60; i++) {
+      const el = document.createElement('div');
+      el.style.cssText = `position:fixed;top:-10px;left:${Math.random()*100}vw;
+        width:8px;height:8px;border-radius:50%;
+        background:${colors[Math.floor(Math.random()*colors.length)]};
+        z-index:99999;pointer-events:none;
+        animation:confettiFall ${1.4+Math.random()*1.6}s ease-in forwards;
+        animation-delay:${Math.random()*0.6}s;
+        transform:rotate(${Math.random()*360}deg);`;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 3200);
+    }
+  };
+
+  // Inject confetti keyframes once
+  if (!document.getElementById('confetti-style')) {
+    const s = document.createElement('style');
+    s.id = 'confetti-style';
+    s.textContent = `@keyframes confettiFall {
+      0%   { transform: translateY(0) rotate(0deg); opacity:1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity:0; }
+    }`;
+    document.head.appendChild(s);
+  }
+
+  setTimeout(burst, 300);
+
+  document.getElementById('eg-winner-name').textContent = winner.name;
+  document.getElementById('eg-winner-name').style.color = winner.color;
+  document.getElementById('eg-winner-nw').textContent = `$${calcNW(winner)}`;
+  document.getElementById('eg-headline').textContent   = '🏆 GAME OVER';
+
+  document.getElementById('eg-standings').innerHTML = `
+    <div style="text-align:center;padding:8px 0 12px">
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--red-lt);font-weight:700;margin-bottom:6px">
+        💀 ${loserNames} went bankrupt
+      </div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--tx-md)">
+        ${winner.name} is the last standing — victory!
+      </div>
+    </div>`;
+
+  // Show full standings too
+  const allScores = GS.players.slice().sort((a,b) => calcNW(b) - calcNW(a));
+  document.getElementById('eg-stats').innerHTML = allScores.map((s, i) => {
+    const bankrupt = isBankrupt(s);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+      <div style="color:${s.color};font-family:var(--font-ui);font-weight:700;font-size:11px">${i===0?'🏆 ':''}${s.name}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${bankrupt?'var(--red-lt)':'var(--gold)'}">
+        ${bankrupt ? '💀 Bankrupt' : `$${calcNW(s)}`}
+      </div>
+    </div>`;
+  }).join('');
+
+  ov.classList.add('show');
+}
+
 function endGame() {
   GS.gameOver = true;
   SFX.gameOver();
@@ -625,29 +733,31 @@ function endGame() {
     document.getElementById('eg-standings').innerHTML = scores.map((s, i) => `
       <div class="mrow">
         <div class="ml" style="color:${s.color};font-family:var(--font-ui);font-weight:700">
-          ${i === 0 ? '🏆 ' : ''}${s.name}
+          ${i === 0 ? '🏆 ' : i === 1 ? '🥈 ' : i === 2 ? '🥉 ' : ''}${s.name}
         </div>
-        <div style="display:flex;gap:12px;align-items:center">
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
           <div class="mv gold" style="font-size:15px">$${s.nw}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">${s.cos}co · ${s.regs}reg</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--tx-lo)">${s.cos} ${s.cos===1?'company':'companies'} · ${s.regs} ${s.regs===1?'region':'regions'} controlled</div>
         </div>
       </div>`).join('');
     document.getElementById('eg-stats').innerHTML = scores.map(s => {
-      const toAtt = GS.stats.toa[s.id] || 0;
-      const toWon = GS.stats.tos[s.id] || 0;
-      const toFail = toAtt - toWon;
-      const winPct = toAtt > 0 ? Math.round(toWon / toAtt * 100) : null;
-      const revTotal = GS.stats.rev[s.id] || 0;
+      const toAtt   = GS.stats.toa[s.id] || 0;
+      const toWon   = GS.stats.tos[s.id] || 0;
+      const toFail  = toAtt - toWon;
+      const winPct  = toAtt > 0 ? Math.round(toWon / toAtt * 100) : null;
+      const revTotal    = GS.stats.rev[s.id] || 0;
       const revPerRound = GS.maxRounds > 0 ? Math.round(revTotal / GS.maxRounds) : 0;
-      const peak = GS.stats.peak[s.id] || 0;
+      const peak    = GS.stats.peak[s.id] || 0;
+      const toLine  = toAtt === 0
+        ? 'No takeovers attempted'
+        : `${toWon} won, ${toFail} failed${winPct !== null ? ` (${winPct}% success)` : ''}`;
       return `
       <div style="padding:8px 0;border-bottom:1px solid var(--border)">
-        <div style="color:${s.color};font-family:var(--font-ui);font-weight:700;font-size:11px;margin-bottom:5px">${s.name}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 10px">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">⚔ Takeovers <span style="color:var(--gold);font-weight:700">${toWon}W · ${toFail}L</span>${winPct!==null?` <span style="color:var(--tx-lo)">(${winPct}% hit rate)</span>`:''}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">📈 Peak net worth <span style="color:var(--gold);font-weight:700">$${peak}</span></div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">💰 Total revenue earned <span style="color:var(--blue-lt);font-weight:700">$${revTotal}</span></div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">📊 Avg per round <span style="color:var(--blue-lt);font-weight:700">$${revPerRound}</span></div>
+        <div style="color:${s.color};font-family:var(--font-ui);font-weight:700;font-size:11px;margin-bottom:6px">${s.name}</div>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">⚔ Hostile takeovers — <span style="color:var(--gold)">${toLine}</span></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">💰 Total income collected — <span style="color:var(--blue-lt)">$${revTotal}</span> <span style="color:var(--tx-lo)">($${revPerRound} per round avg)</span></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">📈 Highest net worth reached — <span style="color:var(--gold)">$${peak}</span></div>
         </div>
       </div>`;
     }).join('');
