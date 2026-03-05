@@ -407,7 +407,7 @@ function mpSerialiseGS() {
       id: p.id, name: p.name, color: p.color, isHuman: p.isHuman, style: p.style,
       cash: p.cash, actionsLeft: p.actionsLeft, stocks: p.stocks,
       ceo: p.ceo, fortified: p.fortified, _noTakeover: p._noTakeover, _noAcquire: p._noAcquire||false,
-      _revPenalty: p._revPenalty, _lastTOFail: p._lastTOFail||0,
+      _revPenalty: p._revPenalty, _lastTOFail: p._lastTOFail||0, _declaredBankrupt: p._declaredBankrupt||false,
       tactics: p.tactics.map(t => ({ name:t.name, icon:t.icon, effect:t.effect, used:t.used,
         poolIdx: TACTICS_POOL.findIndex(tp => tp.name === t.name) })),
     })),
@@ -418,7 +418,8 @@ function mpSerialiseGS() {
 }
 
 function mpApplyState(gs) {
-  const prevRound = GS.round; // track for phase-announce detection
+  const prevRound    = GS.round;
+  const prevGameOver = GS.gameOver; // track so we can fire endGame() exactly once
 
   GS.round        = gs.round;
   GS.maxRounds    = gs.maxRounds;
@@ -444,6 +445,7 @@ function mpApplyState(gs) {
     ...p,
     _noAcquire:  p._noAcquire  || false,
     _lastTOFail: p._lastTOFail || 0,
+    _declaredBankrupt: p._declaredBankrupt || false,
     tactics: p.tactics.map(t => {
       const pool = t.poolIdx >= 0 ? TACTICS_POOL[t.poolIdx] : TACTICS_POOL[0];
       return { ...pool, used: t.used };
@@ -473,8 +475,8 @@ function mpApplyState(gs) {
     showPhaseAnnounce();
   }
 
-  // Show end-game overlay if game just ended
-  if (gs.gameOver && !prevRound) endGame();
+  // Show end-game overlay if game just ended (host set gameOver, client hasn't shown it yet)
+  if (gs.gameOver && !prevGameOver) endGame();
 
   // Show net-lock if not our turn
   const myTurn = GS.currentPlayerIdx === MP.localSlot;
