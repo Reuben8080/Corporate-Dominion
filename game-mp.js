@@ -125,12 +125,38 @@ function mpInitHost() {
 
       conn.on('data', data => mpHostReceive(data, conn.peer));
       conn.on('close', () => {
+        const wasInGame = GS.round > 0 && !GS.gameOver && GS.players.length > 0;
+        // If game is running, mark that slot's player as left (no longer human/active)
+        if (wasInGame) {
+          const leavingPlayer = GS.players[slot];
+          if (leavingPlayer) {
+            leavingPlayer.isHuman = false; // treat as inactive (won't be waited on)
+            glog(`⚠ ${leavingPlayer.name} left the game.`, 'warn');
+            mpChatSystem(`${leavingPlayer.name} has left the game.`);
+          }
+          // Count remaining active humans (excluding host who is always local)
+          const activeHumans = GS.players.filter(p => p.isHuman).length;
+          if (activeHumans <= 1) {
+            glog('⚠ All opponents left — ending game.', 'warn');
+            mpChatSystem('All opponents have left. Game over!');
+            setTimeout(() => { endGame(); mpBroadcastState(); }, 1200);
+          } else {
+            // If it was their turn, auto-advance
+            if (GS.currentPlayerIdx === slot) {
+              mpEndTurnForSlot(slot);
+            } else {
+              mpBroadcastState();
+            }
+          }
+        }
         MP.slots[slot] = { name:'—', filled:false, ready:false, peerId:null, isLocal:false };
         delete MP.conns[conn.peer];
-        mpHostBroadcast({ type:'lobby', slots: MP.slots });
-        renderLobby();
-        setLobbyStatus('ok', `Player disconnected. ${Object.keys(MP.conns).length} connected.`);
-        mpCheckStartable();
+        if (!wasInGame) {
+          mpHostBroadcast({ type:'lobby', slots: MP.slots });
+          renderLobby();
+          setLobbyStatus('ok', `Player disconnected. ${Object.keys(MP.conns).length} connected.`);
+          mpCheckStartable();
+        }
       });
     });
   });
