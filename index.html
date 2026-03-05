@@ -651,7 +651,13 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
 #dice-overlay {
   position: fixed; inset: 0; display: none;
   align-items: center; justify-content: center;
-  background: rgba(0,0,0,.92); backdrop-filter: blur(12px); z-index: 9000;
+  /* Solid background — no backdrop-filter which breaks iOS stacking contexts */
+  background: rgba(0,0,0,.94);
+  z-index: 99999;
+  /* Force new stacking context explicitly */
+  isolation: isolate;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 #dice-overlay.show { display: flex; }
 .dice-box {
@@ -1802,30 +1808,6 @@ button, [onclick], .setup-tab, .mode-card, .dock-btn, .tcard, .cc, .mbtn, .sab {
   </div>
 </div>
 
-<!-- Dice / Takeover resolve -->
-<div id="dice-overlay">
-  <div class="dice-box">
-    <div class="dice-title">⚔ HOSTILE TAKEOVER</div>
-    <!-- Attacker vs Defender -->
-    <div class="dice-vs-row">
-      <div class="dice-attacker" id="dice-attacker-name">YOU</div>
-      <div class="dice-vs-badge">VS</div>
-      <div class="dice-defender" id="dice-defender-name">RIVAL</div>
-    </div>
-    <!-- Target company -->
-    <div style="font-family:var(--font-mono);font-size:10px;color:var(--tx-lo);margin-bottom:4px">Contesting</div>
-    <div style="font-family:var(--font-ui);font-weight:700;font-size:14px;color:var(--tx-hi);margin-bottom:14px" id="dice-company-name">Company</div>
-    <!-- Win odds bar -->
-    <div class="dice-odds-lbl">Your success chance — <span id="dice-odds-pct" style="color:var(--gold);font-weight:700">50%</span></div>
-    <div class="dice-odds-bar"><div class="dice-odds-fill" id="dice-odds-fill" style="width:50%"></div></div>
-    <!-- Rolling display -->
-    <div class="dice-rolling-lbl" id="dice-rolling-lbl">ROLLING…</div>
-    <div class="dice-num" id="dice-num">—</div>
-    <!-- Result -->
-    <div class="dice-result" id="dice-result"></div>
-  </div>
-</div>
-
 <!-- Phase Announce -->
 <div id="phase-announce">
   <div class="pa-inner">
@@ -1926,5 +1908,25 @@ button, [onclick], .setup-tab, .mode-card, .dock-btn, .tcard, .cc, .mbtn, .sab {
 <script src="game-render.js"></script>
 <script src="game-actions.js"></script>
 <script src="game-mp.js"></script>
+
+<!-- Dice overlay: MUST be last element in body — iOS Safari fixed positioning
+     only respects z-index from the topmost DOM stacking context -->
+<div id="dice-overlay">
+  <div class="dice-box">
+    <div class="dice-title">⚔ HOSTILE TAKEOVER</div>
+    <div class="dice-vs-row">
+      <div class="dice-attacker" id="dice-attacker-name">YOU</div>
+      <div class="dice-vs-badge">VS</div>
+      <div class="dice-defender" id="dice-defender-name">RIVAL</div>
+    </div>
+    <div style="font-family:var(--font-mono);font-size:10px;color:var(--tx-lo);margin-bottom:4px">Contesting</div>
+    <div style="font-family:var(--font-ui);font-weight:700;font-size:14px;color:var(--tx-hi);margin-bottom:14px" id="dice-company-name">Company</div>
+    <div class="dice-odds-lbl">Your success chance — <span id="dice-odds-pct" style="color:var(--gold);font-weight:700">50%</span></div>
+    <div class="dice-odds-bar"><div class="dice-odds-fill" id="dice-odds-fill" style="width:50%"></div></div>
+    <div class="dice-rolling-lbl" id="dice-rolling-lbl">ROLLING…</div>
+    <div class="dice-num" id="dice-num">—</div>
+    <div class="dice-result" id="dice-result"></div>
+  </div>
+</div>
 </body>
 </html> 
