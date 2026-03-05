@@ -649,17 +649,25 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
    DICE OVERLAY
 ════════════════════════════════════════ */
 #dice-overlay {
-  position: fixed; inset: 0; display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
   align-items: center; justify-content: center;
-  /* Solid background — no backdrop-filter which breaks iOS stacking contexts */
   background: rgba(0,0,0,.94);
   z-index: 99999;
-  /* Force new stacking context explicitly */
-  isolation: isolate;
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
+  /* Use visibility+opacity instead of display:none — iOS renders it reliably */
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease, visibility .15s ease;
 }
-#dice-overlay.show { display: flex; }
+#dice-overlay.show {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
 .dice-box {
   background: var(--s1); border: 1px solid var(--border-l);
   border-radius: 20px; padding: 28px 24px 24px;
