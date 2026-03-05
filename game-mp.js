@@ -636,10 +636,8 @@ let _chatOpen   = false;
 
 function toggleChat() {
   _chatOpen = !_chatOpen;
-  const panel    = document.getElementById('chat-panel');
-  const backdrop = document.getElementById('chat-backdrop');
+  const panel = document.getElementById('chat-panel');
   if (panel) panel.classList.toggle('open', _chatOpen);
-  if (backdrop) backdrop.classList.toggle('show', _chatOpen);
   if (_chatOpen) {
     _chatUnread = 0;
     const badge = document.getElementById('chat-unread');
@@ -647,6 +645,10 @@ function toggleChat() {
     const msgs = document.getElementById('chat-messages');
     if (msgs) msgs.scrollTop = msgs.scrollHeight;
     setTimeout(() => document.getElementById('chat-input')?.focus(), 120);
+    // Dismiss any visible toast — user is now reading the panel
+    clearTimeout(_chatToastTimer);
+    const toast = document.getElementById('chat-toast');
+    if (toast) { toast.style.opacity = '0'; toast.style.display = 'none'; }
   }
 }
 
@@ -697,17 +699,15 @@ function mpRenderChatMsg(data) {
   const msgs = document.getElementById('chat-messages');
   if (!msgs) return;
 
-  // Deduplicate optimistic renders: if we're a client and get back our own message, skip
+  // Deduplicate optimistic renders
   if (!MP.isHost && data.slot === MP.localSlot && !data._optimistic) {
-    // Find and remove the optimistic copy if it exists
-    const opts = msgs.querySelectorAll('.cmsg.mine.optimistic');
-    opts.forEach(el => el.remove());
+    msgs.querySelectorAll('.cmsg.mine.optimistic').forEach(el => el.remove());
   }
 
   const isMine = data.slot === MP.localSlot;
-  const d   = new Date(data.ts);
-  const hh  = String(d.getHours()).padStart(2,'0');
-  const mm  = String(d.getMinutes()).padStart(2,'0');
+  const d  = new Date(data.ts);
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
 
   const div = document.createElement('div');
   div.className = `cmsg${isMine ? ' mine' : ''}${data._optimistic ? ' optimistic' : ''}`;
@@ -720,16 +720,41 @@ function mpRenderChatMsg(data) {
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
 
-  // Badge the topbar chat button if panel is closed
+  // When panel is closed: badge button + show mobile toast
   if (!_chatOpen) {
     _chatUnread++;
-    const n = _chatUnread > 9 ? '9+' : _chatUnread;
+    const n = _chatUnread > 9 ? '9+' : String(_chatUnread);
     const badge = document.getElementById('chat-unread');
     if (badge) { badge.textContent = n; badge.classList.add('show'); }
-    if (!isMine) {
-      setInfo(`💬 <b style="color:${data.color}">${data.name}</b>: ${escapeHtml(data.text)}`);
-    }
+
+    // Mobile toast — non-blocking 7s notification for ALL messages
+    mpShowChatToast(data);
   }
+}
+
+let _chatToastTimer = null;
+function mpShowChatToast(data) {
+  const toast = document.getElementById('chat-toast');
+  if (!toast) return;
+  // Only show on mobile (panel slides from top; desktop has the side panel)
+  if (window.innerWidth > 640) return;
+
+  clearTimeout(_chatToastTimer);
+  toast.style.display = 'block';
+  toast.innerHTML = `<span style="color:${data.color};font-weight:700;font-family:var(--font-mono);font-size:10px">${data.name}</span> <span style="color:var(--tx-md)">·</span> ${escapeHtml(data.text)}`;
+
+  // Fade in
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+  });
+
+  // Fade out after 7s
+  _chatToastTimer = setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(-4px)';
+    setTimeout(() => { toast.style.display = 'none'; }, 320);
+  }, 7000);
 }
 
 function escapeHtml(str) {
