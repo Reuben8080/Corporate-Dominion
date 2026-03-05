@@ -166,8 +166,7 @@ body   { display: flex; flex-direction: column; height: 100vh; height: 100dvh; o
   background: rgba(9,9,11,.85); border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
   height: 100%; position: relative;
-  /* Do NOT set overflow:hidden here — that clips the leave button */
-  overflow: visible;
+  overflow-x: visible; overflow-y: auto;
 }
 .sidebar-hdr {
   padding: 10px 14px 8px;
@@ -185,21 +184,19 @@ body   { display: flex; flex-direction: column; height: 100vh; height: 100dvh; o
 .leave-sidebar-btn {
   display: none;
   padding: 10px 0; border-radius: var(--r2);
-  background: rgba(244,63,94,.10); border: 1px solid rgba(244,63,94,.35);
+  background: rgba(9,9,11,.95); border: 1px solid rgba(244,63,94,.35);
   color: var(--red-lt); font-family: var(--font-mono); font-size: 10px;
   font-weight: 700; letter-spacing: .1em; cursor: pointer;
   transition: all var(--t-fast);
-  /* Fixed at very bottom — shrink:0 prevents it ever getting squeezed out */
-  flex-shrink: 0; width: calc(100% - 24px); margin: 8px 12px 10px;
+  /* Sticky — always pinned to bottom of sidebar, never scrolls off-screen */
+  position: sticky; bottom: 0;
+  flex-shrink: 0; width: calc(100% - 24px); margin: 4px 12px 8px;
   align-items: center; justify-content: center; gap: 6px;
   touch-action: manipulation;
+  z-index: 2;
 }
 .leave-sidebar-btn:hover, .leave-sidebar-btn:active {
   background: rgba(244,63,94,.22); border-color: var(--red-lt);
-  box-shadow: 0 0 12px rgba(244,63,94,.2);
-}
-.leave-sidebar-btn:hover, .leave-sidebar-btn:active {
-  background: rgba(244,63,94,.25); border-color: var(--red-lt);
   box-shadow: 0 0 14px rgba(244,63,94,.25);
 }
 
