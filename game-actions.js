@@ -303,8 +303,20 @@ function doTakeover(cid, cost, prob) {
   clearAction();
 }
 
-/* ── Dice roll animation ── */
+/* ── Dice roll animation — full resolve (solo + host) ── */
 function runDice(effP, c, def, cost, p) {
+  _showDiceAnimation(effP, c.name, p.name, def.name, (ok, finalRoll) => {
+    resolveTakeover(ok, c, def, cost, p, finalRoll, effP);
+  });
+}
+
+/* ── Dice display only — client MP, no local resolve ── */
+function runDiceDisplay(effP, companyName, attackerName, defenderName) {
+  _showDiceAnimation(effP, companyName, attackerName, defenderName, null);
+}
+
+/* ── Core animation used by both ── */
+function _showDiceAnimation(effP, companyName, attackerName, defenderName, onDone) {
   const ov = document.getElementById('dice-overlay');
 
   const pct = Math.round(effP * 100);
@@ -312,9 +324,9 @@ function runDice(effP, c, def, cost, p) {
                  : pct > 38 ? 'linear-gradient(90deg,#f59e0b,#fbbf24)'
                  :             'linear-gradient(90deg,#f43f5e,#fb7185)';
 
-  document.getElementById('dice-attacker-name').textContent = p.name;
-  document.getElementById('dice-defender-name').textContent = def.name;
-  document.getElementById('dice-company-name').textContent  = c.name;
+  document.getElementById('dice-attacker-name').textContent = attackerName;
+  document.getElementById('dice-defender-name').textContent = defenderName;
+  document.getElementById('dice-company-name').textContent  = companyName;
   document.getElementById('dice-odds-pct').textContent      = pct + '%';
   const fill = document.getElementById('dice-odds-fill');
   fill.style.width      = pct + '%';
@@ -328,7 +340,6 @@ function runDice(effP, c, def, cost, p) {
   resultEl.textContent = '';
   lblEl.textContent    = 'ROLLING…';
 
-  // Show overlay — use rAF so iOS Safari flushes the DOM before we animate
   requestAnimationFrame(() => {
     ov.classList.add('show');
 
@@ -348,15 +359,13 @@ function runDice(effP, c, def, cost, p) {
         numEl.textContent = finalPct + '%';
         numEl.style.color = ok ? 'var(--green-lt)' : 'var(--red-lt)';
         lblEl.textContent = 'RESULT';
-
         resultEl.style.color = ok ? 'var(--green-lt)' : 'var(--red-lt)';
         resultEl.textContent = ok ? '✅  TAKEOVER SUCCESS' : '❌  TAKEOVER FAILED';
-
         ok ? SFX.takeover_ok() : SFX.takeover_fail();
 
         setTimeout(() => {
           ov.classList.remove('show');
-          resolveTakeover(ok, c, def, cost, p, finalRoll, effP);
+          if (onDone) onDone(ok, finalRoll);
         }, 1600);
       }
     }, 55);
