@@ -816,6 +816,7 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
 .room-code-hint { font-family: var(--font-mono); font-size: 8px; color: var(--tx-lo); margin-top: 4px; }
 .lobby-slots { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
 .lslot { background: var(--s2); border: 1px solid var(--border); border-radius: var(--r2); padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+.lslot.open-slot { opacity: .5; }
 .lslot-num  { font-family: var(--font-mono); font-size: 10px; color: var(--tx-lo); width: 18px; }
 .lslot-icon { font-size: 16px; }
 .lslot-name { font-family: var(--font-ui); font-weight: 700; font-size: 12px; flex: 1; }
@@ -823,7 +824,7 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
 .lslot-badge.host  { background: rgba(245,158,11,.1);  color: var(--gold-lt); border: 1px solid rgba(245,158,11,.3); }
 .lslot-badge.ready { background: rgba(16,185,129,.1);  color: var(--green-lt); border: 1px solid rgba(16,185,129,.3); }
 .lslot-badge.wait  { background: var(--s3); color: var(--tx-lo); border: 1px solid var(--border); }
-.lslot-badge.ai    { background: rgba(99,102,241,.1); color: var(--indigo); border: 1px solid rgba(99,102,241,.3); }
+.lslot-badge.open  { background: var(--s3); color: var(--tx-lo); border: 1px solid var(--border); font-style: italic; }
 .lobby-status { font-family: var(--font-mono); font-size: 10px; color: var(--tx-md); padding: 8px 10px; background: var(--s2); border-radius: var(--r2); margin-bottom: 14px; min-height: 36px; display: flex; align-items: center; gap: 8px; }
 .lobby-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .lobby-dot.connecting { background: var(--amber); animation: blink .8s infinite; }
