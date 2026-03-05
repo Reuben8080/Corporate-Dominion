@@ -92,11 +92,9 @@ function handleCompanyClick(cid) {
     const owner = c.ownerId !== null ? GS.players[c.ownerId] : null;
     const val   = calcCompanyValue(c);
     const tk    = owner && owner.id !== slot ? calcTakeover(slot, c) : null;
-    setInfo(
-      `${c.name}  |  Rev $${c.revenue}  |  Val $${val}  |  Lv${c.level}+${c.upgrades}  |  ` +
-      `${SECTORS[c.sectorId].name}  |  ${owner ? owner.name : 'UNOWNED'}` +
-      (tk ? `  |  TO ${Math.round(tk.P * 100)}% · cost $${tk.cost}` : '')
-    );
+    const ownerStr = owner ? `Owned by ${owner.name}` : 'Available to acquire';
+    const toStr    = tk ? ` · Takeover: ${Math.round(tk.P * 100)}% chance, costs $${tk.cost}` : '';
+    setInfo(`${c.name} — ${SECTORS[c.sectorId].name} · Earns $${c.revenue}/round · Worth $${val} · Level ${c.level} · ${ownerStr}${toStr}`);
     return;
   }
 
@@ -308,14 +306,12 @@ function doTakeover(cid, cost, prob) {
 /* ── Dice roll animation ── */
 function runDice(effP, c, def, cost, p) {
   const ov = document.getElementById('dice-overlay');
-  ov.classList.add('show');
 
   const pct = Math.round(effP * 100);
   const barColor = pct > 62 ? 'linear-gradient(90deg,#10b981,#34d399)'
                  : pct > 38 ? 'linear-gradient(90deg,#f59e0b,#fbbf24)'
                  :             'linear-gradient(90deg,#f43f5e,#fb7185)';
 
-  // Populate static fields
   document.getElementById('dice-attacker-name').textContent = p.name;
   document.getElementById('dice-defender-name').textContent = def.name;
   document.getElementById('dice-company-name').textContent  = c.name;
@@ -332,35 +328,39 @@ function runDice(effP, c, def, cost, p) {
   resultEl.textContent = '';
   lblEl.textContent    = 'ROLLING…';
 
-  const finalRoll = Math.random();
-  const ok = finalRoll <= effP;
-  let ticks = 0;
+  // Show overlay — use rAF so iOS Safari flushes the DOM before we animate
+  requestAnimationFrame(() => {
+    ov.classList.add('show');
 
-  // Animate: show random % values, then lock to final
-  const iv = setInterval(() => {
-    ticks++;
-    if (ticks < 22) {
-      const fake = Math.round(Math.random() * 100);
-      numEl.textContent = fake + '%';
-      numEl.style.color = fake <= pct ? 'var(--green-lt)' : 'var(--red-lt)';
-    } else {
-      clearInterval(iv);
-      const finalPct = Math.round(finalRoll * 100);
-      numEl.textContent = finalPct + '%';
-      numEl.style.color = ok ? 'var(--green-lt)' : 'var(--red-lt)';
-      lblEl.textContent = ok ? 'RESULT' : 'RESULT';
+    const finalRoll = Math.random();
+    const ok = finalRoll <= effP;
+    let ticks = 0;
 
-      resultEl.style.color = ok ? 'var(--green-lt)' : 'var(--red-lt)';
-      resultEl.textContent = ok ? '✅  TAKEOVER SUCCESS' : '❌  TAKEOVER FAILED';
+    const iv = setInterval(() => {
+      ticks++;
+      if (ticks < 22) {
+        const fake = Math.round(Math.random() * 100);
+        numEl.textContent = fake + '%';
+        numEl.style.color = fake <= pct ? 'var(--green-lt)' : 'var(--red-lt)';
+      } else {
+        clearInterval(iv);
+        const finalPct = Math.round(finalRoll * 100);
+        numEl.textContent = finalPct + '%';
+        numEl.style.color = ok ? 'var(--green-lt)' : 'var(--red-lt)';
+        lblEl.textContent = 'RESULT';
 
-      ok ? SFX.takeover_ok() : SFX.takeover_fail();
+        resultEl.style.color = ok ? 'var(--green-lt)' : 'var(--red-lt)';
+        resultEl.textContent = ok ? '✅  TAKEOVER SUCCESS' : '❌  TAKEOVER FAILED';
 
-      setTimeout(() => {
-        ov.classList.remove('show');
-        resolveTakeover(ok, c, def, cost, p, finalRoll, effP);
-      }, 1600);
-    }
-  }, 55);
+        ok ? SFX.takeover_ok() : SFX.takeover_fail();
+
+        setTimeout(() => {
+          ov.classList.remove('show');
+          resolveTakeover(ok, c, def, cost, p, finalRoll, effP);
+        }, 1600);
+      }
+    }, 55);
+  });
 }
 
 function resolveTakeover(ok, c, def, cost, p, roll, effP) {
