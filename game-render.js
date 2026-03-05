@@ -347,23 +347,41 @@ function showStocksModal() {
   const actColor = actLeft === 0 ? 'var(--red-lt)' : actLeft === 1 ? 'var(--gold-lt)' : 'var(--green-lt)';
   let content = '';
   content += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-    <div style="font-family:var(--font-mono);font-size:8px;color:var(--tx-lo);letter-spacing:.12em;text-transform:uppercase">5 Sectors</div>
+    <div style="font-family:var(--font-mono);font-size:8px;color:var(--tx-lo);letter-spacing:.12em;text-transform:uppercase">4 Sectors · Dividends vary each round</div>
     <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:${actColor}">⚡ ${actLeft} action${actLeft!==1?'s':''} left</div>
   </div>`;
   GS.sectors.forEach((s, i) => {
     const mine = p.stocks[i] || 0;
-    const div = Math.round(s.price / 5);
+    const divBase = Math.round(s.price / 5);
+    const divLo   = Math.max(1, Math.round(divBase * 0.65));
+    const divHi   = Math.round(divBase * 1.35);
     const canB = myTurn && actLeft > 0 && p.cash >= (s.price - p.ceo.stockBonus) && s.sharesLeft > 0;
     const canS = myTurn && actLeft > 0 && mine > 0;
-    const trend = s.growthScore > 3 ? '↑↑ hot' : s.growthScore > 0 ? '↑ active' : s.growthScore < -2 ? '↓↓ cold' : '→ stable';
+    // Price history spark arrows
+    const hist  = s.priceHistory || [];
+    const spark = hist.slice(-4).map((v, j, a) => {
+      if (j === 0) return '';
+      const d = v - a[j-1];
+      return d > 0 ? `<span style="color:var(--green-lt)">↑</span>` : d < 0 ? `<span style="color:var(--red-lt)">↓</span>` : `<span style="color:var(--tx-lo)">→</span>`;
+    }).join('');
+    const delta = s.price - (hist.length > 1 ? hist[hist.length-2] : s.price);
+    const dc    = delta > 0 ? 'var(--green-lt)' : delta < 0 ? 'var(--red-lt)' : 'var(--tx-lo)';
+    const ds    = delta > 0 ? '+'+delta : delta;
+    const trend = s.growthScore > 3 ? '🔥 hot' : s.growthScore > 0 ? '↑ active' : s.growthScore < -2 ? '❄ cold' : '→ stable';
     const trendColor = s.growthScore > 3 ? 'var(--green-lt)' : s.growthScore > 0 ? 'var(--blue-lt)' : s.growthScore < -2 ? 'var(--red-lt)' : 'var(--tx-md)';
     content += `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
       <div style="flex:1">
-        <div style="color:var(--tx-hi);font-weight:600;font-size:11px">${s.name}</div>
-        <div style="font-family:var(--font-mono);font-size:9px;color:var(--tx-lo);margin-top:2px">
-          <span style="color:var(--gold)">$${s.price}</span> · <span style="color:${trendColor}">${trend}</span> · div+<span style="color:var(--green-lt)">$${div}</span>
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <span style="color:var(--tx-hi);font-weight:600;font-size:11px">${s.name}</span>
+          <span style="font-family:var(--font-mono);font-size:9px">${spark}</span>
         </div>
-        ${mine>0?`<div style="font-family:var(--font-mono);font-size:8px;color:var(--indigo);margin-top:1px">${mine} share${mine>1?'s':''}</div>`:''}
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--tx-lo);margin-top:2px">
+          <span style="color:var(--gold)">$${s.price}</span>
+          <span style="color:${dc}"> ${ds}</span>
+          · <span style="color:${trendColor}">${trend}</span>
+          · div <span style="color:var(--green-lt)">$${divLo}–$${divHi}</span>
+        </div>
+        ${mine>0?`<div style="font-family:var(--font-mono);font-size:8px;color:var(--indigo);margin-top:1px">${mine} share${mine>1?'s':''} · est. +$${divLo}–$${divHi*mine}/rnd</div>`:''}
       </div>
       <div style="display:flex;gap:4px;flex-shrink:0">
         <button class="sab buy" onclick="doStockBuy(${i})" ${canB?'':'disabled'}>BUY</button>
