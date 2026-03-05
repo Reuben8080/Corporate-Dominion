@@ -134,7 +134,7 @@ function selectMode(n) {
   SFX.ui();
 }
 
-function buildBonusPreview(numPlayers) {
+function buildBonusPreview(numPlayers) 
   const pool  = [...STARTUP_BONUSES];
   startupBonuses = Array.from({ length: numPlayers }, () => {
     const i = Math.floor(Math.random() * pool.length);
