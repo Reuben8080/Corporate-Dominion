@@ -134,7 +134,6 @@ function handleCompanyClick(cid) {
         <button class="mbtn" onclick="closeModal()">Cancel</button>
       </div>`);
   }
-  }
 
   /* UPGRADE */
   else if (action === 'upgrade') {
