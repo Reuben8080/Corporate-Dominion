@@ -851,13 +851,33 @@ if (typeof doSell === 'function') {
 if (typeof doTakeover === 'function') {
   const _doTakeover = doTakeover;
   globalThis.doTakeover = function(cid, cost, prob) {
-    if (MP.active && !MP.isHost) { closeModal(); mpClientAction({action:'takeover',cid}); clearAction(); return; }
+    if (MP.active && !MP.isHost) {
+      closeModal();
+      clearAction();
+      // Show dice animation on client — visual only, host resolves the real outcome
+      const c   = GS.companies.find(x => x.id === cid);
+      const def = c && c.ownerId !== null ? GS.players[c.ownerId] : null;
+      const me  = GS.players[MP.localSlot];
+      if (c && def && me && typeof runDiceDisplay === 'function') {
+        runDiceDisplay(prob, c.name, me.name, def.name);
+      }
+      mpClientAction({action:'takeover', cid});
+      return;
+    }
     _doTakeover(cid, cost, prob);
     if (MP.active && MP.isHost) mpBroadcastState();
   };
 } else {
   globalThis.doTakeover = function(cid, cost, prob) {
-    if (MP.active && !MP.isHost) { closeModal(); mpClientAction({action:'takeover',cid}); clearAction(); return; }
+    if (MP.active && !MP.isHost) {
+      closeModal(); clearAction();
+      const c = GS.companies.find(x => x.id === cid);
+      const def = c && c.ownerId !== null ? GS.players[c.ownerId] : null;
+      const me  = GS.players[MP.localSlot];
+      if (c && def && me && typeof runDiceDisplay === 'function') runDiceDisplay(prob, c.name, me.name, def.name);
+      mpClientAction({action:'takeover', cid});
+      return;
+    }
     console.warn('doTakeover called before core is defined');
   };
 }
