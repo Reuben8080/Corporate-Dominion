@@ -380,7 +380,8 @@ function mpSerialiseGS() {
     players: GS.players.map(p => ({
       id: p.id, name: p.name, color: p.color, isHuman: p.isHuman, style: p.style,
       cash: p.cash, actionsLeft: p.actionsLeft, stocks: p.stocks,
-      ceo: p.ceo, fortified: p.fortified, _noTakeover: p._noTakeover, _revPenalty: p._revPenalty,
+      ceo: p.ceo, fortified: p.fortified, _noTakeover: p._noTakeover, _noAcquire: p._noAcquire||false,
+      _revPenalty: p._revPenalty, _lastTOFail: p._lastTOFail||0,
       tactics: p.tactics.map(t => ({ name:t.name, icon:t.icon, effect:t.effect, used:t.used,
         poolIdx: TACTICS_POOL.findIndex(tp => tp.name === t.name) })),
     })),
@@ -415,6 +416,8 @@ function mpApplyState(gs) {
   // Restore players (with tactic action functions)
   GS.players = gs.players.map(p => ({
     ...p,
+    _noAcquire:  p._noAcquire  || false,
+    _lastTOFail: p._lastTOFail || 0,
     tactics: p.tactics.map(t => {
       const pool = t.poolIdx >= 0 ? TACTICS_POOL[t.poolIdx] : TACTICS_POOL[0];
       return { ...pool, used: t.used };
@@ -490,10 +493,12 @@ function mpExecuteRemoteAction(data, slotIdx) {
   switch (data.action) {
     case 'acquire': {
       const c = GS.companies.find(x => x.id === data.cid);
-      if (c && c.ownerId === null && p.cash >= c.baseValue) {
+      if (c && c.ownerId === null && p.cash >= c.baseValue && !p._noAcquire) {
         p.cash -= c.baseValue; c.ownerId = slotIdx; p.actionsLeft--;
         glog(`${p.name} acquired ${c.name}`, 'info');
         updateRegionControl(); updateStockPrices();
+      } else if (p._noAcquire) {
+        glog(`${p.name}: Hostile Press — acquisition blocked!`, 'warn');
       }
       break;
     }
@@ -526,7 +531,7 @@ function mpExecuteRemoteAction(data, slotIdx) {
           const ep  = Math.max(0.05, tk.P - fp);
           const roll = Math.random();
           if (roll <= ep) { c.ownerId = slotIdx; GS.stats.tos[slotIdx]++; glog(`${p.name} ⚔ captured ${c.name}`, 'warn'); }
-          else { const ret=Math.floor(tk.cost*.5); c.failedTakeoversAgainst++; GS._marketInstability = Math.min(3, GS._marketInstability + 1); setTimeout(()=>{p.cash+=ret; mpBroadcastState();},1900); glog(`${p.name} takeover failed: ${c.name}`, 'info'); }
+          else { const ret=Math.floor(tk.cost*.5); const lost=tk.cost-ret; p._lastTOFail=lost; c.failedTakeoversAgainst++; GS._marketInstability = Math.min(3, GS._marketInstability + 1); setTimeout(()=>{p.cash+=ret; mpBroadcastState();},1900); glog(`${p.name} takeover failed: ${c.name}`, 'info'); }
           updateRegionControl(); updateStockPrices();
         }
       }
