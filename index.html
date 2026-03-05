@@ -651,15 +651,74 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
 #dice-overlay {
   position: fixed; inset: 0; display: none;
   align-items: center; justify-content: center;
-  background: rgba(0,0,0,.8); backdrop-filter: blur(8px); z-index: 900;
+  background: rgba(0,0,0,.92); backdrop-filter: blur(12px); z-index: 9000;
 }
 #dice-overlay.show { display: flex; }
-.dice-box { background: var(--s1); border: 1px solid var(--border-l); border-radius: var(--r); padding: 28px 32px; text-align: center; min-width: 240px; animation: fadeIn .15s ease; }
-.dice-title { font-family: var(--font-mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--tx-lo); margin-bottom: 8px; }
-.dice-target { font-family: var(--font-ui); font-weight: 700; font-size: 13px; color: var(--tx-hi); margin-bottom: 4px; }
-.dice-need { font-family: var(--font-mono); font-size: 9px; color: var(--tx-lo); margin-bottom: 16px; }
-.dice-num { font-family: var(--font-mono); font-size: 40px; font-weight: 700; color: var(--tx-hi); margin-bottom: 8px; transition: color .2s; }
-.dice-result { font-family: var(--font-ui); font-weight: 800; font-size: 18px; letter-spacing: .06em; min-height: 24px; }
+.dice-box {
+  background: var(--s1); border: 1px solid var(--border-l);
+  border-radius: 20px; padding: 28px 24px 24px;
+  text-align: center; width: min(380px, 92vw);
+  animation: fadeIn .18s ease;
+}
+.dice-title {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--tx-lo); margin-bottom: 14px;
+}
+.dice-vs-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; margin-bottom: 18px;
+}
+.dice-attacker, .dice-defender {
+  flex: 1; padding: 10px 8px; border-radius: 10px;
+  font-family: var(--font-ui); font-weight: 700; font-size: 12px;
+  line-height: 1.3;
+}
+.dice-attacker { background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.3); color: var(--green-lt); }
+.dice-defender { background: rgba(244,63,94,.12);  border: 1px solid rgba(244,63,94,.3);  color: var(--red-lt); }
+.dice-vs-badge {
+  font-family: var(--font-ui); font-weight: 900; font-size: 13px;
+  color: var(--gold); flex-shrink: 0;
+}
+.dice-odds-lbl {
+  font-family: var(--font-mono); font-size: 9px; color: var(--tx-lo);
+  letter-spacing: .06em; margin-bottom: 6px;
+}
+.dice-odds-bar {
+  height: 10px; background: var(--s3); border-radius: 8px;
+  overflow: hidden; margin-bottom: 18px;
+}
+.dice-odds-fill {
+  height: 100%; border-radius: 8px;
+  background: linear-gradient(90deg, var(--green-lt), #34d399);
+  transition: width .5s ease;
+}
+.dice-rolling-lbl {
+  font-family: var(--font-mono); font-size: 10px; color: var(--tx-lo);
+  margin-bottom: 8px; letter-spacing: .08em;
+}
+.dice-num {
+  font-family: var(--font-mono); font-size: 52px; font-weight: 800;
+  color: var(--tx-hi); margin-bottom: 12px;
+  transition: color .2s; line-height: 1;
+  letter-spacing: -.02em;
+}
+.dice-bar-wrap {
+  height: 12px; background: var(--s3); border-radius: 8px;
+  overflow: visible; margin-bottom: 16px; position: relative;
+}
+.dice-bar-fill {
+  height: 100%; border-radius: 8px;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  transition: width .08s linear;
+}
+.dice-bar-threshold {
+  position: absolute; top: -4px; bottom: -4px;
+  width: 3px; background: var(--gold); border-radius: 2px;
+}
+.dice-result {
+  font-family: var(--font-ui); font-weight: 800; font-size: 22px;
+  letter-spacing: .06em; min-height: 28px;
+}
 
 /* ════════════════════════════════════════
    TUTORIAL
@@ -1747,9 +1806,22 @@ button, [onclick], .setup-tab, .mode-card, .dock-btn, .tcard, .cc, .mbtn, .sab {
 <div id="dice-overlay">
   <div class="dice-box">
     <div class="dice-title">⚔ HOSTILE TAKEOVER</div>
-    <div class="dice-target" id="dice-target"></div>
-    <div class="dice-need"   id="dice-need"></div>
-    <div class="dice-num"    id="dice-num">0.000</div>
+    <!-- Attacker vs Defender -->
+    <div class="dice-vs-row">
+      <div class="dice-attacker" id="dice-attacker-name">YOU</div>
+      <div class="dice-vs-badge">VS</div>
+      <div class="dice-defender" id="dice-defender-name">RIVAL</div>
+    </div>
+    <!-- Target company -->
+    <div style="font-family:var(--font-mono);font-size:10px;color:var(--tx-lo);margin-bottom:4px">Contesting</div>
+    <div style="font-family:var(--font-ui);font-weight:700;font-size:14px;color:var(--tx-hi);margin-bottom:14px" id="dice-company-name">Company</div>
+    <!-- Win odds bar -->
+    <div class="dice-odds-lbl">Your success chance — <span id="dice-odds-pct" style="color:var(--gold);font-weight:700">50%</span></div>
+    <div class="dice-odds-bar"><div class="dice-odds-fill" id="dice-odds-fill" style="width:50%"></div></div>
+    <!-- Rolling display -->
+    <div class="dice-rolling-lbl" id="dice-rolling-lbl">ROLLING…</div>
+    <div class="dice-num" id="dice-num">—</div>
+    <!-- Result -->
     <div class="dice-result" id="dice-result"></div>
   </div>
 </div>
