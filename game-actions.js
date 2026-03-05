@@ -219,6 +219,12 @@ function doAcquire(cid) {
   closeModal();
   const slot = mySlot();
   const p = GS.players[slot]; const c = GS.companies.find(x => x.id === cid);
+  if (p._noAcquire) {
+    SFX.nope();
+    glog(`${p.name}: Hostile Press — blocked from acquiring this round!`, 'warn');
+    setInfo('❌ Hostile Press: you cannot acquire companies this round.');
+    return;
+  }
   p.cash -= c.baseValue; c.ownerId = slot; p.actionsLeft--;
   SFX.acquire();
   glog(`${p.name} acquired ${c.name} ($${c.baseValue})`, 'good');
@@ -307,6 +313,7 @@ function resolveTakeover(ok, c, def, cost, p, roll, effP) {
   } else {
     const lost = Math.floor(cost * 0.5);
     const ret  = cost - lost;
+    p._lastTOFail = lost; // Sovereign Bailout can recover this
     c.failedTakeoversAgainst++;
     GS._marketInstability = Math.min(3, (GS._marketInstability || 0) + 1);
     setTimeout(() => { p.cash += ret; glog(`+$${ret} returned from failed takeover.`, 'info'); render(); }, 1900);
