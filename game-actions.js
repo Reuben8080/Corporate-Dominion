@@ -43,9 +43,12 @@ function passAction() {
 }
 
 /* ── clearAction: unified (dock styling + auto-end) ── */
-let _autoEndTimer = null;
+let _autoEndTimer  = null;
+let _lastActionUsed = null; // remember for auto-reselect
+
 function clearAction() {
-  GS.selectedAction = null;
+  const prevAction   = GS.selectedAction;
+  GS.selectedAction  = null;
   ['acquire','upgrade','takeover','sell'].forEach(a =>
     document.getElementById('btn-' + a)?.classList.remove('active'));
 
@@ -65,6 +68,14 @@ function clearAction() {
   } else if (p.actionsLeft > 0) {
     const left = p.actionsLeft;
     setInfo(`Action complete — <b style="color:var(--gold)">${left} action${left !== 1 ? 's' : ''} remaining</b>. [Space] to end turn early.`);
+    // Auto-reselect the same action so player doesn't need to tap again
+    if (prevAction && ['acquire','upgrade','takeover','sell'].includes(prevAction)) {
+      setTimeout(() => {
+        if (GS.currentPlayerIdx === slot && p.actionsLeft > 0 && !GS.selectedAction) {
+          setAction(prevAction);
+        }
+      }, 120);
+    }
   }
 }
 
@@ -94,9 +105,17 @@ function handleCompanyClick(cid) {
   /* ACQUIRE */
   if (action === 'acquire') {
     if (c.ownerId !== null) { SFX.nope(); setInfo('❌ This company is owned — use Takeover instead.'); return; }
-    if (p.cash < c.baseValue) { SFX.nope(); setInfo(`❌ Need $${c.baseValue}, you have $${p.cash}.`); return; }
+    const canAfford  = p.cash >= c.baseValue;
+    const blocked    = p._noAcquire;
     const trRow = c.trait
       ? `<div class="mrow"><div class="ml">Trait</div><div class="mv" style="color:${c.trait.color}">${c.trait.name} — ${c.trait.desc}</div></div>` : '';
+    let blockBanner = '';
+    if (blocked) {
+      blockBanner = `<div style="margin:10px 0;padding:10px 12px;background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.35);border-radius:8px;font-family:var(--font-mono);font-size:9px;color:var(--red-lt);font-weight:700">📰 HOSTILE PRESS ACTIVE — you cannot acquire companies this round.</div>`;
+    } else if (!canAfford) {
+      blockBanner = `<div style="margin:10px 0;padding:10px 12px;background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.35);border-radius:8px;font-family:var(--font-mono);font-size:9px;color:var(--red-lt);font-weight:700">💸 INSUFFICIENT FUNDS — you have $${p.cash}, need $${c.baseValue}. Try selling a company first.</div>`;
+    }
+    const confirmDisabled = (!canAfford || blocked) ? 'disabled style="opacity:.4;cursor:not-allowed"' : '';
     showModal('Acquire Company', `
       <div class="mrow"><div class="ml">Company</div><div class="mv">${c.name}</div></div>
       <div class="mrow"><div class="ml">Region</div><div class="mv">${REGIONS[c.regionIdx].name}</div></div>
@@ -104,23 +123,29 @@ function handleCompanyClick(cid) {
       <div class="mrow"><div class="ml">Revenue / round</div><div class="mv gold">$${c.revenue}</div></div>
       <div class="mrow"><div class="ml">Base Value</div><div class="mv">$${c.baseValue}</div></div>
       ${trRow}
+      ${blockBanner}
       <div class="cost-block" style="margin:12px 0">
         <div class="cb-lbl">Acquisition Cost</div>
-        <div class="cb-num">$${c.baseValue}</div>
-        <div class="cb-sub">Charged from your cash immediately</div>
+        <div class="cb-num" style="${!canAfford||blocked?'color:var(--red-lt)':''}">$${c.baseValue}</div>
+        <div class="cb-sub">Charged from your cash immediately · You have $${p.cash}</div>
       </div>
       <div class="mbtns">
-        <button class="mbtn pri" onclick="doAcquire(${cid})">Acquire ✓</button>
+        <button class="mbtn pri" onclick="doAcquire(${cid})" ${confirmDisabled}>Acquire ✓</button>
         <button class="mbtn" onclick="closeModal()">Cancel</button>
       </div>`);
+  }
   }
 
   /* UPGRADE */
   else if (action === 'upgrade') {
     if (c.ownerId !== slot) { SFX.nope(); setInfo('❌ You can only upgrade your own companies.'); return; }
-    const cost  = 20 + c.upgrades * 10;
-    const nxtLv = (c.upgrades + 1) % 2 === 0;
-    if (p.cash < cost) { SFX.nope(); setInfo(`❌ Need $${cost}, you have $${p.cash}.`); return; }
+    const cost    = 20 + c.upgrades * 10;
+    const nxtLv   = (c.upgrades + 1) % 2 === 0;
+    const canAfford = p.cash >= cost;
+    const blockBanner = !canAfford
+      ? `<div style="margin:10px 0;padding:10px 12px;background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.35);border-radius:8px;font-family:var(--font-mono);font-size:9px;color:var(--red-lt);font-weight:700">💸 INSUFFICIENT FUNDS — you have $${p.cash}, need $${cost}. Earn more revenue or sell a company.</div>`
+      : '';
+    const confirmDisabled = !canAfford ? 'disabled style="opacity:.4;cursor:not-allowed"' : '';
     showModal('⬆ Upgrade Company', `
       <div class="mrow"><div class="ml">Company</div><div class="mv">${c.name}</div></div>
       <div class="mrow"><div class="ml">Current Level</div><div class="mv green">Lv${c.level} (${c.upgrades} upgrades)</div></div>
@@ -138,12 +163,14 @@ function handleCompanyClick(cid) {
           ${nxtLv ? `<div style="flex:1"><div style="color:var(--green-lt);font-weight:700;font-size:13px">→ Lv Up</div><div style="font-family:var(--font-mono);font-size:8px;color:var(--tx-lo);margin-top:2px">next upgrade</div></div>` : ''}
         </div>
       </div>
+      ${blockBanner}
       <div class="cost-block" style="margin:12px 0">
         <div class="cb-lbl">Upgrade Cost</div>
-        <div class="cb-num">$${cost}</div>
+        <div class="cb-num" style="${!canAfford?'color:var(--red-lt)':''}">$${cost}</div>
+        <div class="cb-sub">You have $${p.cash}</div>
       </div>
       <div class="mbtns">
-        <button class="mbtn pri" onclick="doUpgrade(${cid})">Upgrade ✓</button>
+        <button class="mbtn pri" onclick="doUpgrade(${cid})" ${confirmDisabled}>Upgrade ✓</button>
         <button class="mbtn" onclick="closeModal()">Cancel</button>
       </div>`);
   }
@@ -152,30 +179,34 @@ function handleCompanyClick(cid) {
   else if (action === 'takeover') {
     if (c.ownerId === null) { SFX.nope(); setInfo('❌ Use Acquire for unowned companies.'); return; }
     if (c.ownerId === slot) { SFX.nope(); setInfo('❌ You already own this company.'); return; }
-    if (p._noTakeover)      { SFX.nope(); setInfo('❌ Antitrust probe: no takeovers this round.'); return; }
     const tk  = calcTakeover(slot, c);
     const def = GS.players[c.ownerId];
-    if (p.cash < tk.cost) {
-      SFX.nope();
-      setInfo(`❌ Need $${tk.cost} for this takeover — you have $${p.cash}. Consider selling a company first.`);
-      return;
-    }
-    const pct  = Math.round(tk.P * 100);
-    const bc   = pct > 62 ? 'var(--green-lt)' : pct > 38 ? 'var(--gold-lt)' : 'var(--red-lt)';
+    const pct = Math.round(tk.P * 100);
+    const bc  = pct > 62 ? 'var(--green-lt)' : pct > 38 ? 'var(--gold-lt)' : 'var(--red-lt)';
     const risk = pct < 30 ? 'HIGH RISK — likely to fail'
                : pct < 50 ? 'CONTESTED — coin flip'
                : pct < 68 ? 'FAVORABLE — good odds'
                : 'DOMINANT — nearly certain';
+    const isAntitrust  = !!p._noTakeover;
+    const cantAfford   = p.cash < tk.cost;
+    let blockBanner = '';
+    if (isAntitrust) {
+      blockBanner = `<div style="margin:10px 0;padding:10px 12px;background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.35);border-radius:8px;font-family:var(--font-mono);font-size:9px;color:var(--red-lt);font-weight:700">⚖ ANTITRUST PROBE ACTIVE — you are legally blocked from launching takeovers this round. This will clear next round.</div>`;
+    } else if (cantAfford) {
+      blockBanner = `<div style="margin:10px 0;padding:10px 12px;background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.35);border-radius:8px;font-family:var(--font-mono);font-size:9px;color:var(--red-lt);font-weight:700">💸 INSUFFICIENT FUNDS — you have $${p.cash}, need $${tk.cost}. Try selling a weak company to fund this takeover.</div>`;
+    }
+    const confirmDisabled = (isAntitrust || cantAfford) ? 'disabled style="opacity:.4;cursor:not-allowed"' : '';
     const fortW = def.fortified
       ? `<div class="fort-warn">⚠ FORTIFIED — success chance reduced by 15%</div>` : '';
     showModal('⚔ Hostile Takeover', `
       <div class="mrow"><div class="ml">Target</div><div class="mv">${c.name}</div></div>
       <div class="mrow"><div class="ml">Current Owner</div><div class="mv" style="color:${def.color}">${def.name}</div></div>
-      <div class="mrow"><div class="ml">Attack Power (A)</div><div class="mv gold">${tk.A}</div></div>
-      <div class="mrow"><div class="ml">Defense Score (D)</div><div class="mv red">${tk.D}</div></div>
+      <div class="mrow"><div class="ml">Your Attack</div><div class="mv gold">${tk.A}</div></div>
+      <div class="mrow"><div class="ml">Their Defense</div><div class="mv red">${tk.D}</div></div>
+      ${blockBanner}
       <div class="cost-block" style="margin:12px 0">
-        <div class="cb-lbl">⬆ Upfront Cost — charged now</div>
-        <div class="cb-num">$${tk.cost}</div>
+        <div class="cb-lbl">Upfront Cost — charged now</div>
+        <div class="cb-num" style="${cantAfford||isAntitrust?'color:var(--red-lt)':''}">$${tk.cost}</div>
         <div class="cb-sub">
           <span style="color:var(--green-lt)">WIN</span>: company is yours &nbsp;·&nbsp;
           <span style="color:var(--red-lt)">FAIL</span>: lose $${Math.floor(tk.cost * .5)}, recover $${Math.ceil(tk.cost * .5)} next round
@@ -188,7 +219,7 @@ function handleCompanyClick(cid) {
       </div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${bc};margin:4px 0 8px">${risk}</div>
       <div class="mbtns">
-        <button class="mbtn danger" onclick="doTakeover(${cid},${tk.cost},${tk.P.toFixed(4)})">Launch Takeover</button>
+        <button class="mbtn danger" onclick="doTakeover(${cid},${tk.cost},${tk.P.toFixed(4)})" ${confirmDisabled}>Launch Takeover</button>
         <button class="mbtn" onclick="closeModal()">Abort</button>
       </div>`);
   }
