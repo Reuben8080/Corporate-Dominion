@@ -100,7 +100,15 @@ function mpInitHost() {
   setLobbyStatus('connecting', 'Opening connection server…');
 
   try {
-    MP.peer = new Peer(mpPeerId(MP.roomCode, 0), { debug: 0 });
+    MP.peer = new Peer(mpPeerId(MP.roomCode, 0), {
+      debug: 0,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+        ]
+      }
+    });
   } catch(e) {
     setLobbyStatus('err', 'PeerJS not available — check internet connection.');
     return;
@@ -222,9 +230,18 @@ function mpCheckStartable() {
 ───────────────────────────────────────────── */
 function mpInitClient() {
   setLobbyStatus('connecting', `Connecting to room ${MP.roomCode}…`);
+  const peerCfg = {
+    debug: 0,
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+      ]
+    }
+  };
   try {
     const clientId = `corpdom-${MP.roomCode}-c${Date.now()}`;
-    MP.peer = new Peer(clientId, { debug: 0 });
+    MP.peer = new Peer(clientId, peerCfg);
   } catch(e) {
     setLobbyStatus('err', 'PeerJS not available — check internet connection.');
     return;
@@ -232,11 +249,13 @@ function mpInitClient() {
 
   MP.peer.on('open', () => {
     setLobbyStatus('connecting', 'Reaching host…');
-    const conn = MP.peer.connect(mpPeerId(MP.roomCode, 0));
+    const conn = MP.peer.connect(mpPeerId(MP.roomCode, 0), { reliable: true });
     MP.hostConn = conn;
 
     conn.on('open', () => {
       setLobbyStatus('ok', 'Connected to host — waiting for slot assignment…');
+      // Send ready immediately on open — no arbitrary delay needed
+      conn.send({ type:'ready', name: MP.playerName });
     });
 
     conn.on('data', data => mpClientReceive(data));
@@ -256,11 +275,6 @@ function mpInitClient() {
       setLobbyStatus('err', `Connection error: ${e.type}`);
     }
   });
-
-  // Send ready with player name — host uses this to label the slot
-  setTimeout(() => {
-    if (MP.hostConn?.open) MP.hostConn.send({ type:'ready', name: MP.playerName });
-  }, 2000);
 }
 
 function mpClientReceive(data) {
