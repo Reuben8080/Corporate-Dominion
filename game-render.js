@@ -147,11 +147,11 @@ function renderMap() {
           GS.lastHoveredTak = c;
         }
         if (action==='acquire' && c.ownerId===null)
-          setInfo(`🏢 Acquire <b>${c.name}</b> — Cost: <b style="color:var(--gold-lt)">$${c.baseValue}</b> · Rev $${c.revenue}/rnd · ${SECTORS[c.sectorId].name}${c.trait?' · '+c.trait.name:''}`);
+          setInfo(`🏢 Acquire <b>${c.name}</b> — costs $${c.baseValue} · earns $${c.revenue} per round · ${SECTORS[c.sectorId].name}${c.trait?' · '+c.trait.name:''}`);
         if (action==='upgrade' && c.ownerId===mySlot())
-          setInfo(`⬆ Upgrade <b>${c.name}</b> — Cost: <b style="color:var(--gold-lt)">$${20+c.upgrades*10}</b> · New rev $${c.revenue+4}/rnd`);
+          setInfo(`⬆ Upgrade <b>${c.name}</b> — costs $${20+c.upgrades*10} · revenue goes from $${c.revenue} to $${c.revenue+4}`);
         if (action==='sell' && c.ownerId===mySlot())
-          setInfo(`📈 Sell <b>${c.name}</b> — Receive: <b style="color:var(--amber)">$${calcSellPrice(c)}</b> (65% of $${calcCompanyValue(c)})`);
+          setInfo(`📈 Sell <b>${c.name}</b> — receive $${calcSellPrice(c)} (65% of market value $${calcCompanyValue(c)})`);
       };
 
       const lvProg = ((c.upgrades % 2) / 2) * 100;
@@ -162,6 +162,7 @@ function renderMap() {
         ? `<div class="co-owner-badge" style="background:${owner.color}20;color:${owner.color};border:1px solid ${owner.color}40">${owner.name[0]}</div>`
         : '';
       const revColor = c.revenue>20?'var(--gold-lt)':c.revenue>14?'var(--green-lt)':'var(--tx-md)';
+      const upgradeLabel = c.upgrades > 0 ? ` +${c.upgrades}` : '';
 
       card.innerHTML = `
         ${c.ownerId===null?`<div class="acq-cost">$${c.baseValue}</div>`:''}
@@ -171,12 +172,12 @@ function renderMap() {
         </div>
         <div class="co-rev-row">
           <div>
-            <div class="co-rev-lbl">Rev/rnd</div>
+            <div class="co-rev-lbl">per round</div>
             <div class="co-rev-val" style="color:${revColor}">$${c.revenue}</div>
           </div>
         </div>
         <div class="co-meta">
-          <span class="co-lv">Lv${c.level}+${c.upgrades}</span>
+          <span class="co-lv">Lv${c.level}${upgradeLabel}</span>
           ${trHtml}
           ${owner&&owner.fortified?'<span style="font-size:10px">🛡</span>':''}
         </div>
