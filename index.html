@@ -1134,9 +1134,17 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
     letter-spacing: .05em; touch-action: manipulation;
   }
 
-  /* Replace in-dock end-turn with floating pill on mobile */
-  .end-turn-btn { display: none !important; }
-  #mobile-end-turn { display: block; }
+  /* Mobile End Turn: lives inside the dock grid as a 3rd full-width row */
+  .end-turn-btn {
+    display: block;
+    grid-column: 1 / -1; /* span all 4 columns */
+    width: 100%; height: 46px; padding: 0;
+    font-size: 14px; font-weight: 800; letter-spacing: .05em;
+    border-radius: 10px; min-height: 46px;
+    touch-action: manipulation;
+  }
+  /* Hide the separate floating pill — not needed */
+  #mobile-end-turn { display: none !important; }
 
   /* ── BOARD: pad bottom so last cards don't hide under fixed dock ── */
   #board {
@@ -1694,8 +1702,8 @@ button, [onclick], .setup-tab, .mode-card, .dock-btn, .tcard, .cc, .mbtn, .sab {
           <div class="dock-icon">⊘</div>
           <div class="dock-lbl">PASS</div>
         </button>
+        <button class="end-turn-btn" id="end-turn-btn" onclick="endTurn()">End Turn ›</button>
       </div>
-      <button class="end-turn-btn" id="end-turn-btn" onclick="endTurn()">End Turn ›</button>
     </div>
   </div>
 
