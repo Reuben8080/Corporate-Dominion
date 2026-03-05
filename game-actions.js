@@ -309,28 +309,56 @@ function doTakeover(cid, cost, prob) {
 function runDice(effP, c, def, cost, p) {
   const ov = document.getElementById('dice-overlay');
   ov.classList.add('show');
-  document.getElementById('dice-target').textContent = `${c.name}  ←  ${def.name}`;
-  document.getElementById('dice-need').textContent   = `Need ≤ ${effP.toFixed(3)} to succeed`;
-  document.getElementById('dice-num').style.color    = 'var(--tx-hi)';
-  document.getElementById('dice-result').textContent = '';
+
+  const pct = Math.round(effP * 100);
+  const barColor = pct > 62 ? 'linear-gradient(90deg,#10b981,#34d399)'
+                 : pct > 38 ? 'linear-gradient(90deg,#f59e0b,#fbbf24)'
+                 :             'linear-gradient(90deg,#f43f5e,#fb7185)';
+
+  // Populate static fields
+  document.getElementById('dice-attacker-name').textContent = p.name;
+  document.getElementById('dice-defender-name').textContent = def.name;
+  document.getElementById('dice-company-name').textContent  = c.name;
+  document.getElementById('dice-odds-pct').textContent      = pct + '%';
+  const fill = document.getElementById('dice-odds-fill');
+  fill.style.width      = pct + '%';
+  fill.style.background = barColor;
+
+  const numEl    = document.getElementById('dice-num');
+  const resultEl = document.getElementById('dice-result');
+  const lblEl    = document.getElementById('dice-rolling-lbl');
+  numEl.style.color    = 'var(--tx-hi)';
+  numEl.textContent    = '—';
+  resultEl.textContent = '';
+  lblEl.textContent    = 'ROLLING…';
 
   const finalRoll = Math.random();
+  const ok = finalRoll <= effP;
   let ticks = 0;
+
+  // Animate: show random % values, then lock to final
   const iv = setInterval(() => {
     ticks++;
-    const shown = ticks < 24 ? Math.random() : finalRoll;
-    document.getElementById('dice-num').textContent = shown.toFixed(3);
-    if (ticks >= 24) {
+    if (ticks < 22) {
+      const fake = Math.round(Math.random() * 100);
+      numEl.textContent = fake + '%';
+      numEl.style.color = fake <= pct ? 'var(--green-lt)' : 'var(--red-lt)';
+    } else {
       clearInterval(iv);
-      const ok = finalRoll <= effP;
-      document.getElementById('dice-num').style.color    = ok ? 'var(--green-lt)' : 'var(--red-lt)';
-      document.getElementById('dice-result').textContent = ok ? '✓  SUCCESS' : '✗  FAILED';
-      document.getElementById('dice-result').style.color = ok ? 'var(--green-lt)' : 'var(--red-lt)';
+      const finalPct = Math.round(finalRoll * 100);
+      numEl.textContent = finalPct + '%';
+      numEl.style.color = ok ? 'var(--green-lt)' : 'var(--red-lt)';
+      lblEl.textContent = ok ? 'RESULT' : 'RESULT';
+
+      resultEl.style.color = ok ? 'var(--green-lt)' : 'var(--red-lt)';
+      resultEl.textContent = ok ? '✅  TAKEOVER SUCCESS' : '❌  TAKEOVER FAILED';
+
       ok ? SFX.takeover_ok() : SFX.takeover_fail();
+
       setTimeout(() => {
         ov.classList.remove('show');
         resolveTakeover(ok, c, def, cost, p, finalRoll, effP);
-      }, 1400);
+      }, 1600);
     }
   }, 55);
 }
