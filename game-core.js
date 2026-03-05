@@ -632,14 +632,25 @@ function endGame() {
           <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">${s.cos}co · ${s.regs}reg</div>
         </div>
       </div>`).join('');
-    document.getElementById('eg-stats').innerHTML = scores.map(s => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">
-        <div style="color:${s.color};font-family:var(--font-ui);font-weight:700;font-size:10px;min-width:54px">${s.name}</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">TOs <span style="color:var(--gold)">${GS.stats.toa[s.id]}</span></div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">Win% <span style="color:var(--green-lt)">${GS.stats.toa[s.id] > 0 ? Math.round(GS.stats.tos[s.id] / GS.stats.toa[s.id] * 100) + '%' : '—'}</span></div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">Rev <span style="color:var(--blue-lt)">$${GS.stats.rev[s.id]}</span></div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">Peak <span style="color:var(--gold)">$${GS.stats.peak[s.id]}</span></div>
-      </div>`).join('');
+    document.getElementById('eg-stats').innerHTML = scores.map(s => {
+      const toAtt = GS.stats.toa[s.id] || 0;
+      const toWon = GS.stats.tos[s.id] || 0;
+      const toFail = toAtt - toWon;
+      const winPct = toAtt > 0 ? Math.round(toWon / toAtt * 100) : null;
+      const revTotal = GS.stats.rev[s.id] || 0;
+      const revPerRound = GS.maxRounds > 0 ? Math.round(revTotal / GS.maxRounds) : 0;
+      const peak = GS.stats.peak[s.id] || 0;
+      return `
+      <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="color:${s.color};font-family:var(--font-ui);font-weight:700;font-size:11px;margin-bottom:5px">${s.name}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 10px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">⚔ Takeovers <span style="color:var(--gold);font-weight:700">${toWon}W · ${toFail}L</span>${winPct!==null?` <span style="color:var(--tx-lo)">(${winPct}% hit rate)</span>`:''}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">📈 Peak net worth <span style="color:var(--gold);font-weight:700">$${peak}</span></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">💰 Total revenue earned <span style="color:var(--blue-lt);font-weight:700">$${revTotal}</span></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx-lo)">📊 Avg per round <span style="color:var(--blue-lt);font-weight:700">$${revPerRound}</span></div>
+        </div>
+      </div>`;
+    }).join('');
     ov.classList.add('show');
   } else {
     /* Fallback for missing overlay */
