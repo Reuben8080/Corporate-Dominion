@@ -1358,14 +1358,6 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
 }
 #chat-close:hover, #chat-close:active { background: var(--s3); color: var(--tx-hi); }
 
-/* Backdrop — tapping outside the chat sheet closes it on mobile */
-#chat-backdrop {
-  display: none; position: fixed; inset: 0;
-  z-index: 195; /* just below chat panel (200) */
-  background: rgba(0,0,0,.35);
-  touch-action: manipulation;
-}
-#chat-backdrop.show { display: block; }
 
 #chat-messages {
   flex: 1; overflow-y: auto; padding: 6px 0;
@@ -1432,28 +1424,38 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
 }
 #chat-send:hover { background: rgba(99,102,241,.28); border-color: var(--indigo-lt); }
 
-/* Mobile chat — bottom sheet sitting ABOVE the dock */
+/* Mobile chat — drops down from topbar, never covers dock */
 @media (max-width: 640px) {
   #chat-panel {
-    top: auto; right: 0; left: 0;
-    /* Stop above the action dock so End Turn is always tappable */
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 215px);
-    width: 100%; max-height: 56vh;
-    border-left: none; border-top: 1px solid var(--border-l);
-    border-radius: 16px 16px 0 0;
-    transform: translateY(110%);
+    top: 48px; right: 0; left: 0; bottom: auto; width: 100%;
+    max-height: 42vh;
+    border-left: none; border-bottom: 1px solid var(--border-l);
+    border-top: none; border-radius: 0 0 16px 16px;
+    transform: translateY(-110%);
+    transition: transform .25s ease;
+    box-shadow: 0 8px 32px rgba(0,0,0,.6);
   }
   #chat-panel.open { transform: translateY(0); }
+  #chat-btn::after { content: none; }
+  #chat-btn { flex-direction: row; height: 36px; padding: 0 8px; }
   .cq { font-size: 9px; padding: 5px 10px; }
   #chat-input { font-size: 14px; }
-  /* Label the chat button on mobile so it's discoverable */
-  #chat-btn::after {
-    content: 'CHAT'; display: block;
-    font-family: var(--font-mono); font-size: 6px; font-weight: 700;
-    letter-spacing: .06em; color: var(--tx-lo); line-height: 1;
-    margin-top: 1px;
-  }
-  #chat-btn { flex-direction: column; height: auto; padding: 3px 5px; gap: 0; }
+}
+
+/* ── Chat Toast (mobile — passive notification, never blocks taps) ── */
+#chat-toast {
+  position: fixed; left: 50%; top: 58px;
+  transform: translateX(-50%) translateY(-4px);
+  max-width: calc(100vw - 32px);
+  background: rgba(15,15,18,.92); border: 1px solid var(--border-l);
+  border-radius: 20px; padding: 7px 16px 7px 12px;
+  font-family: var(--font-ui); font-size: 12px; color: var(--tx-hi);
+  pointer-events: none; z-index: 190;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  backdrop-filter: blur(12px);
+  opacity: 0; transition: opacity .3s ease, transform .3s ease;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+  display: none; /* shown only on mobile via JS */
 }
 
 /* ── Mobile floating End Turn (outside dock, always reachable) ── */
@@ -1786,12 +1788,11 @@ button, [onclick], .setup-tab, .mode-card, .dock-btn, .tcard, .cc, .mbtn, .sab {
 <!-- Auto-end + Net lock toasts -->
 <div id="auto-end-toast">✓ All actions used — ending turn…</div>
 <div id="net-lock">⏳ Waiting for <span id="net-lock-name">opponent</span>…</div>
+<!-- Mobile chat toast — passive 7s notification, pointer-events:none -->
+<div id="chat-toast"></div>
 
 <!-- Mobile floating End Turn button (lives outside dock, always accessible) -->
 <button id="mobile-end-turn" onclick="endTurn()">End Turn ›</button>
-
-<!-- Chat backdrop (mobile — tap outside to close) -->
-<div id="chat-backdrop" onclick="toggleChat()"></div>
 
 <!-- ══════════════════════════════════════════
      CHAT PANEL (MP only — shown via JS)
