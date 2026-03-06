@@ -53,7 +53,11 @@ function mpGenCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return Array.from({length:6}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
 }
-function mpPeerId(code, slot) { return `corpdom-${code}-${slot}`; }
+function mpPeerId(code, slot) {
+  // Include a session salt on the host ID so re-used room codes don't collide with
+  // a previous session that may still be registered on the signaling server.
+  return `corpdom-${code}-${slot}`;
+}
 
 /* ── Copy room code to clipboard ── */
 function mpCopyCode() {
@@ -188,7 +192,19 @@ function mpInitHost() {
   });
 
   MP.peer.on('error', e => {
-    setLobbyStatus('err', `Connection error: ${e.type}`);
+    if (e.type === 'unavailable-id') {
+      // Room code already in use by an active session — generate a new one and retry
+      setLobbyStatus('connecting', 'Room code taken — generating a new one…');
+      setTimeout(() => {
+        MP.roomCode = mpGenCode();
+        document.getElementById('lobby-code').textContent = MP.roomCode;
+        MP.peer?.destroy();
+        MP.peer = null;
+        mpInitHost();
+      }, 800);
+    } else {
+      setLobbyStatus('err', `Connection error: ${e.type} — check your internet connection and try again.`);
+    }
   });
 
   renderLobby();
@@ -234,15 +250,19 @@ function mpHostBroadcast(msg) {
 
 function mpCheckStartable() {
   const humanSlots = MP.slots.filter(s => s.filled);
-  const allReady   = humanSlots.length >= 1 && humanSlots.every(s => s.ready || s.isLocal);
+  const n          = humanSlots.length;
+  const allReady   = n >= 2 && humanSlots.every(s => s.ready || s.isLocal);
   const btn        = document.getElementById('lobby-start-btn');
   const info       = document.getElementById('lobby-info');
   if (btn) btn.disabled = !allReady;
   if (info) {
-    const n = humanSlots.length;
-    info.textContent = n === 1
-      ? 'Waiting for players to join… (or start solo)'
-      : `${n} player${n > 1 ? 's' : ''} connected — ready to start!`;
+    if (n < 2) {
+      info.textContent = 'Waiting for at least 1 more player to join…';
+    } else if (!allReady) {
+      info.textContent = `${n} players connected — waiting for everyone to be ready…`;
+    } else {
+      info.textContent = `${n} players ready — host can start!`;
+    }
   }
 }
 
@@ -536,11 +556,16 @@ function mpApplyState(gs) {
   }
 
   // Show end-game overlay if game just ended (host set gameOver, client hasn't shown it yet)
-  if (gs.gameOver && !prevGameOver) endGame();
+  // Guard with a flag so we never fire endGame() twice on the same client
+  if (gs.gameOver && !prevGameOver && !GS._endGameShown) {
+    GS._endGameShown = true;
+    endGame();
+  }
 
-  // Show net-lock if not our turn
+  // Show net-lock only when it's another player's turn mid-game
   const myTurn = GS.currentPlayerIdx === MP.localSlot;
-  document.getElementById('net-lock').classList.toggle('show', !myTurn && !GS.gameOver);
+  const showLock = !myTurn && !GS.gameOver;
+  document.getElementById('net-lock').classList.toggle('show', showLock);
   const turnerName = GS.players[GS.currentPlayerIdx]?.name || '?';
   const lockEl = document.getElementById('net-lock-name');
   if (lockEl) lockEl.textContent = turnerName;
