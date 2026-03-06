@@ -172,18 +172,19 @@ function mpInitHost() {
     conn.on('open', () => {
       const slot = MP.slots.findIndex((s, i) => i > 0 && !s.filled);
       if (slot === -1) { conn.send({type:'full'}); conn.close(); return; }
+      // Register conn FIRST so mpHostBroadcast can reach this client
       MP.conns[conn.peer] = conn;
-      // Apply any pending name that arrived before open (ready before assigned)
+      // Apply any pending name/ready that arrived before open
       const pendingName = MP._pendingNames?.[conn.peer];
       MP.slots[slot] = {
-        name: pendingName || `Player ${slot+1}`,
-        filled: true,
-        ready: !!pendingName, // already ready if we got their message early
-        peerId: conn.peer,
-        isLocal: false
+        name:    pendingName || `Player ${slot+1}`,
+        filled:  true,
+        ready:   !!pendingName,
+        peerId:  conn.peer,
+        isLocal: false,
       };
-      if (pendingName && MP._pendingNames) delete MP._pendingNames[conn.peer];
-      conn.send({ type:'assigned', slot, roomCode:MP.roomCode });
+      if (MP._pendingNames) delete MP._pendingNames[conn.peer];
+      conn.send({ type:'assigned', slot, roomCode: MP.roomCode });
       mpHostBroadcast({ type:'lobby', slots: MP.slots });
       setLobbyStatus('ok', `${Object.keys(MP.conns).length} player(s) connected — waiting for ready…`);
       renderLobby();
@@ -215,14 +216,14 @@ function mpHostReceive(data, peerId) {
     const slot = MP.slots.findIndex(s => s.peerId === peerId);
     if (slot !== -1) {
       MP.slots[slot].ready = true;
-      if (data.name) MP.slots[slot].name = data.name;
+      if (data.name) MP.slots[slot].name = data.name; // always update — overrides pendingName placeholder
       mpHostBroadcast({ type:'lobby', slots: MP.slots });
       renderLobby();
       mpCheckStartable();
     } else {
-      // Slot not assigned yet (open hasn't fired) — store name for when it does
+      // Slot not yet assigned (data arrived before open) — queue it
       if (!MP._pendingNames) MP._pendingNames = {};
-      MP._pendingNames[peerId] = data.name;
+      MP._pendingNames[peerId] = data.name || 'PLAYER';
     }
   }
   // Client missed the initial state packet — resend
@@ -271,72 +272,102 @@ function mpCheckStartable() {
 ───────────────────────────────────────────── */
 function mpInitClient() {
   setLobbyStatus('connecting', `Connecting to room ${MP.roomCode}…`);
-  let _connectAttempt = 0;  // reset each time mpInitClient is called fresh
+
+  // Destroy any previous peer cleanly
+  if (MP.peer) { try { MP.peer.destroy(); } catch(e){} MP.peer = null; }
+
+  let _attempt        = 0;
   const MAX_ATTEMPTS  = 4;
+  let   _activeConn   = null;   // track current conn so old ones can be ignored
+  let   _retrying     = false;  // flag — don't show disconnect modal during intentional retry
 
   try {
-    const clientId = `corpdom-${MP.roomCode}-c${Date.now()}`;
-    MP.peer = new Peer(clientId, makePeerCfg());
+    MP.peer = new Peer(`corpdom-${MP.roomCode}-c${Date.now()}`, makePeerCfg());
   } catch(e) {
     setLobbyStatus('err', 'PeerJS not available — check internet connection.');
     return;
   }
 
   function attemptConnect() {
-    _connectAttempt++;
-    const label = _connectAttempt > 1 ? ` (attempt ${_connectAttempt}/${MAX_ATTEMPTS})` : '';
+    _attempt++;
+    _retrying = false;
+    const label = _attempt > 1 ? ` (attempt ${_attempt}/${MAX_ATTEMPTS})` : '';
     setLobbyStatus('connecting', `Reaching host…${label}`);
 
-    const conn = MP.peer.connect(mpPeerId(MP.roomCode, 0), { reliable: true });
-    MP.hostConn = conn;
+    // Close and discard any previous connection before creating a new one
+    if (_activeConn) {
+      _retrying = true;
+      try { _activeConn.close(); } catch(e){}
+      _activeConn = null;
+    }
 
-    // Register data handler BEFORE open fires — eliminates race with host's assigned packet
-    conn.on('data',  data => mpClientReceive(data));
-    conn.on('close', () => {
-      setLobbyStatus('err', 'Lost connection to host.');
-      if (!GS.gameOver) showModal('Disconnected', `<p style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx-md);margin-bottom:14px">Lost connection to the host. The game cannot continue.</p><div class="mbtns"><button class="mbtn pri" onclick="location.reload()">Reload</button></div>`);
-    });
-    conn.on('error', e => setLobbyStatus('err', `Connection error: ${e}`));
+    const conn = MP.peer.connect(mpPeerId(MP.roomCode, 0), { reliable: true, serialization: 'json' });
+    _activeConn  = conn;
+    MP.hostConn  = conn;
 
-    conn.on('open', () => {
-      setLobbyStatus('ok', 'Connected — waiting for slot assignment…');
-      conn.send({ type:'ready', name: MP.playerName });
-    });
-
-    // Connection timeout — if not open in 6s, retry
-    const _connTimeout = setTimeout(() => {
-      if (!conn.open) {
-        conn.close();
-        if (_connectAttempt < MAX_ATTEMPTS) {
-          setLobbyStatus('connecting', `Connection timed out — retrying…`);
-          setTimeout(attemptConnect, 800);
+    // Single open handler — send ready and clear timeout
+    let _connTimeout = setTimeout(() => {
+      if (!conn.open && conn === _activeConn) {
+        _retrying = true;
+        try { conn.close(); } catch(e){}
+        _activeConn = null;
+        if (_attempt < MAX_ATTEMPTS) {
+          setLobbyStatus('connecting', `Timed out — retrying…`);
+          setTimeout(attemptConnect, 600);
         } else {
+          _retrying = false;
           setLobbyStatus('err', `Could not reach room "${MP.roomCode}". Is the host connected?`);
         }
       }
-    }, 6000);
-    // Clear timeout once open
-    conn.on('open', () => clearTimeout(_connTimeout));
+    }, 7000);
+
+    conn.on('open', () => {
+      if (conn !== _activeConn) return; // stale conn — ignore
+      clearTimeout(_connTimeout);
+      setLobbyStatus('ok', 'Connected — waiting for slot assignment…');
+      conn.send({ type: 'ready', name: MP.playerName });
+    });
+
+    conn.on('data', data => {
+      if (conn !== _activeConn) return; // stale conn — ignore
+      mpClientReceive(data);
+    });
+
+    conn.on('error', e => {
+      if (conn !== _activeConn) return;
+      setLobbyStatus('err', `Connection error: ${e.type || e}`);
+    });
+
+    conn.on('close', () => {
+      if (conn !== _activeConn) return; // stale close from a replaced conn — ignore
+      clearTimeout(_connTimeout);
+      if (_retrying) return; // intentional close during retry — don't show modal
+      setLobbyStatus('err', 'Lost connection to host.');
+      if (!GS.gameOver) {
+        showModal('Disconnected', `<p style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx-md);margin-bottom:14px">Lost connection to the host. The game cannot continue.</p><div class="mbtns"><button class="mbtn pri" onclick="location.reload()">Reload</button></div>`);
+      }
+    });
   }
 
   MP.peer.on('open', () => attemptConnect());
 
   MP.peer.on('error', e => {
     if (e.type === 'peer-unavailable') {
-      // PeerJS signaling server said host not found — retry (host may still be registering)
-      if (_connectAttempt < MAX_ATTEMPTS) {
-        const wait = 1200 * _connectAttempt; // back off: 1.2s, 2.4s, 3.6s
-        setLobbyStatus('connecting', `Room not ready yet — retrying in ${(wait/1000).toFixed(1)}s… (${_connectAttempt}/${MAX_ATTEMPTS})`);
+      // Host peer not found on signaling server — retry with backoff
+      if (_attempt < MAX_ATTEMPTS) {
+        const wait = 1000 + (_attempt * 800);
+        setLobbyStatus('connecting', `Room not found — retrying in ${(wait/1000).toFixed(1)}s… (${_attempt}/${MAX_ATTEMPTS})`);
+        _retrying = true;
         setTimeout(attemptConnect, wait);
       } else {
-        setLobbyStatus('err', `Room "${MP.roomCode}" not found after ${MAX_ATTEMPTS} attempts. Check the code and try again.`);
+        setLobbyStatus('err', `Room "${MP.roomCode}" not found. Check the code and try again.`);
       }
     } else if (e.type === 'unavailable-id') {
-      // Our client ID collision — just reinit with new timestamp ID
+      // Client ID collision — reinit with a new timestamp ID
       setLobbyStatus('connecting', 'ID conflict — reconnecting…');
-      setTimeout(mpInitClient, 500);
+      setTimeout(mpInitClient, 400);
     } else {
-      setLobbyStatus('err', `Connection error: ${e.type}`);
+      setLobbyStatus('err', `Connection error: ${e.type} — check internet and try again.`);
     }
   });
 }
