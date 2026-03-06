@@ -120,8 +120,41 @@ function mpInitHost() {
   });
 
   MP.peer.on('connection', conn => {
+    // Register data/close handlers IMMEDIATELY at connection level,
+    // before 'open' fires — prevents the race where client sends 'ready'
+    // before the host's data handler is attached.
+    conn.on('data',  data => mpHostReceive(data, conn.peer));
+    conn.on('close', () => {
+      const wasInGame = GS.round > 0 && !GS.gameOver && GS.players.length > 0;
+      const slot = MP.slots.findIndex(s => s.peerId === conn.peer);
+      if (wasInGame && slot !== -1) {
+        const leavingPlayer = GS.players[slot];
+        if (leavingPlayer) {
+          leavingPlayer.isHuman = false;
+          glog(`⚠ ${leavingPlayer.name} left the game.`, 'warn');
+          mpChatSystem(`${leavingPlayer.name} has left the game.`);
+        }
+        const activeHumans = GS.players.filter(p => p.isHuman).length;
+        if (activeHumans <= 1) {
+          glog('⚠ All opponents left — ending game.', 'warn');
+          mpChatSystem('All opponents have left. Game over!');
+          setTimeout(() => { endGame(); mpBroadcastState(); }, 1200);
+        } else {
+          if (slot !== -1 && GS.currentPlayerIdx === slot) mpEndTurnForSlot(slot);
+          else mpBroadcastState();
+        }
+      }
+      if (slot !== -1) MP.slots[slot] = { name:'—', filled:false, ready:false, peerId:null, isLocal:false };
+      delete MP.conns[conn.peer];
+      if (!wasInGame) {
+        mpHostBroadcast({ type:'lobby', slots: MP.slots });
+        renderLobby();
+        setLobbyStatus('ok', `Player disconnected. ${Object.keys(MP.conns).length} connected.`);
+        mpCheckStartable();
+      }
+    });
+
     conn.on('open', () => {
-      // Assign next free slot
       const slot = MP.slots.findIndex((s, i) => i > 0 && !s.filled);
       if (slot === -1) { conn.send({type:'full'}); conn.close(); return; }
       MP.conns[conn.peer] = conn;
@@ -130,42 +163,6 @@ function mpInitHost() {
       mpHostBroadcast({ type:'lobby', slots: MP.slots });
       setLobbyStatus('ok', `${Object.keys(MP.conns).length} player(s) connected — waiting for ready…`);
       renderLobby();
-
-      conn.on('data', data => mpHostReceive(data, conn.peer));
-      conn.on('close', () => {
-        const wasInGame = GS.round > 0 && !GS.gameOver && GS.players.length > 0;
-        // If game is running, mark that slot's player as left (no longer human/active)
-        if (wasInGame) {
-          const leavingPlayer = GS.players[slot];
-          if (leavingPlayer) {
-            leavingPlayer.isHuman = false; // treat as inactive (won't be waited on)
-            glog(`⚠ ${leavingPlayer.name} left the game.`, 'warn');
-            mpChatSystem(`${leavingPlayer.name} has left the game.`);
-          }
-          // Count remaining active humans (excluding host who is always local)
-          const activeHumans = GS.players.filter(p => p.isHuman).length;
-          if (activeHumans <= 1) {
-            glog('⚠ All opponents left — ending game.', 'warn');
-            mpChatSystem('All opponents have left. Game over!');
-            setTimeout(() => { endGame(); mpBroadcastState(); }, 1200);
-          } else {
-            // If it was their turn, auto-advance
-            if (GS.currentPlayerIdx === slot) {
-              mpEndTurnForSlot(slot);
-            } else {
-              mpBroadcastState();
-            }
-          }
-        }
-        MP.slots[slot] = { name:'—', filled:false, ready:false, peerId:null, isLocal:false };
-        delete MP.conns[conn.peer];
-        if (!wasInGame) {
-          mpHostBroadcast({ type:'lobby', slots: MP.slots });
-          renderLobby();
-          setLobbyStatus('ok', `Player disconnected. ${Object.keys(MP.conns).length} connected.`);
-          mpCheckStartable();
-        }
-      });
     });
   });
 
@@ -247,30 +244,62 @@ function mpInitClient() {
     return;
   }
 
-  MP.peer.on('open', () => {
-    setLobbyStatus('connecting', 'Reaching host…');
+  let _connectAttempt = 0;
+  const MAX_ATTEMPTS  = 4;
+
+  function attemptConnect() {
+    _connectAttempt++;
+    const label = _connectAttempt > 1 ? ` (attempt ${_connectAttempt}/${MAX_ATTEMPTS})` : '';
+    setLobbyStatus('connecting', `Reaching host…${label}`);
+
     const conn = MP.peer.connect(mpPeerId(MP.roomCode, 0), { reliable: true });
     MP.hostConn = conn;
 
-    conn.on('open', () => {
-      setLobbyStatus('ok', 'Connected to host — waiting for slot assignment…');
-      // Send ready immediately on open — no arbitrary delay needed
-      conn.send({ type:'ready', name: MP.playerName });
-    });
-
-    conn.on('data', data => mpClientReceive(data));
-
+    // Register data handler BEFORE open fires — eliminates race with host's assigned packet
+    conn.on('data',  data => mpClientReceive(data));
     conn.on('close', () => {
       setLobbyStatus('err', 'Lost connection to host.');
       if (!GS.gameOver) showModal('Disconnected', `<p style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx-md);margin-bottom:14px">Lost connection to the host. The game cannot continue.</p><div class="mbtns"><button class="mbtn pri" onclick="location.reload()">Reload</button></div>`);
     });
+    conn.on('error', e => setLobbyStatus('err', `Connection error: ${e}`));
 
-    conn.on('error', e => setLobbyStatus('err', `Peer error: ${e}`));
-  });
+    conn.on('open', () => {
+      setLobbyStatus('ok', 'Connected — waiting for slot assignment…');
+      conn.send({ type:'ready', name: MP.playerName });
+    });
+
+    // Connection timeout — if not open in 6s, retry
+    const _connTimeout = setTimeout(() => {
+      if (!conn.open) {
+        conn.close();
+        if (_connectAttempt < MAX_ATTEMPTS) {
+          setLobbyStatus('connecting', `Connection timed out — retrying…`);
+          setTimeout(attemptConnect, 800);
+        } else {
+          setLobbyStatus('err', `Could not reach room "${MP.roomCode}". Is the host connected?`);
+        }
+      }
+    }, 6000);
+    // Clear timeout once open
+    conn.on('open', () => clearTimeout(_connTimeout));
+  }
+
+  MP.peer.on('open', () => attemptConnect());
 
   MP.peer.on('error', e => {
     if (e.type === 'peer-unavailable') {
-      setLobbyStatus('err', `Room "${MP.roomCode}" not found. Check the code and try again.`);
+      // PeerJS signaling server said host not found — retry (host may still be registering)
+      if (_connectAttempt < MAX_ATTEMPTS) {
+        const wait = 1200 * _connectAttempt; // back off: 1.2s, 2.4s, 3.6s
+        setLobbyStatus('connecting', `Room not ready yet — retrying in ${(wait/1000).toFixed(1)}s… (${_connectAttempt}/${MAX_ATTEMPTS})`);
+        setTimeout(attemptConnect, wait);
+      } else {
+        setLobbyStatus('err', `Room "${MP.roomCode}" not found after ${MAX_ATTEMPTS} attempts. Check the code and try again.`);
+      }
+    } else if (e.type === 'unavailable-id') {
+      // Our client ID collision — just reinit with new timestamp ID
+      setLobbyStatus('connecting', 'ID conflict — reconnecting…');
+      setTimeout(mpInitClient, 500);
     } else {
       setLobbyStatus('err', `Connection error: ${e.type}`);
     }
