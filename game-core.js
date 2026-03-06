@@ -27,10 +27,10 @@ const PLAYER_DEFS = [
   { id:3, name:'VORTEX', color:'#f59e0b', isHuman:false, style:'opportunist' },
 ];
 const CEO_TYPES = [
-  { type:'Aggressive Raider',    bonus:'+4 attack',         attackBonus:4, defenseBonus:0, stockBonus:0 },
-  { type:'Infrastructure Mogul', bonus:'+5 defense / co',   attackBonus:0, defenseBonus:5, stockBonus:0 },
-  { type:'Financial Architect',  bonus:'−3 on stock buys',  attackBonus:0, defenseBonus:0, stockBonus:3 },
-  { type:'Corp Opportunist',     bonus:'+2 attack, +2 def', attackBonus:2, defenseBonus:2, stockBonus:0 },
+  { type:'Aggressive Raider',    bonus:'+8 attack',          attackBonus:8, defenseBonus:0, stockBonus:0 },
+  { type:'Infrastructure Mogul', bonus:'+7 defense / co',    attackBonus:0, defenseBonus:7, stockBonus:0 },
+  { type:'Financial Architect',  bonus:'−4 on stock buys',   attackBonus:0, defenseBonus:0, stockBonus:4 },
+  { type:'Corp Opportunist',     bonus:'+5 attack, +3 def',  attackBonus:5, defenseBonus:3, stockBonus:0 },
 ];
 const TACTICS_POOL = [
   { name:'Emergency Funding',  icon:'💰', effect:'+$60 cash injection',
@@ -39,7 +39,7 @@ const TACTICS_POOL = [
     action: p => { const lead=GS.players.filter(x=>x.id!==p.id).sort((a,b)=>calcNW(b)-calcNW(a))[0]; if(!lead){SFX.nope();return;} const amt=Math.min(50,lead.cash); lead.cash-=amt; p.cash+=amt; SFX.card(); glog(`${p.name}: Espionage — stole $${amt} from ${lead.name}!`,'warn'); } },
   { name:'Hostile Press',      icon:'📰', effect:'Leader loses $40 · frozen from acquiring next turn',
     action: p => { const lead=GS.players.filter(x=>x.id!==p.id).sort((a,b)=>calcNW(b)-calcNW(a))[0]; if(!lead){SFX.nope();return;} const amt=Math.min(40,lead.cash); lead.cash-=amt; lead._noAcquire=true; SFX.card(); glog(`${p.name}: Hostile Press! ${lead.name} loses $${amt} & locked out of acquisitions!`,'warn'); } },
-  { name:'Market Correction',  icon:'📉', effect:'All players lose 15% cash (min $20)',
+  { name:'Market Correction',  icon:'📉', effect:'ALL players (including you) lose 15% cash — use when trailing',
     action: p => { GS.players.forEach(q => { const loss=Math.max(20,Math.floor(q.cash*0.15)); q.cash=Math.max(0,q.cash-loss); glog(`${q.name}: Market Correction −$${loss}`,'warn'); }); SFX.card(); render(); } },
   { name:'Sovereign Bailout',  icon:'🏛', effect:'Recover your last failed takeover loss',
     action: p => { const amt=p._lastTOFail||0; if(amt>0){ p.cash+=amt; p._lastTOFail=0; SFX.card(); glog(`${p.name}: Sovereign Bailout — recovered $${amt}!`,'good'); } else { p.cash+=30; SFX.card(); glog(`${p.name}: Sovereign Bailout — +$30 (no prior loss on record).`,'good'); } } },
@@ -66,7 +66,7 @@ const STARTUP_BONUSES = [
   { name:'Seed Funding',    icon:'💰', desc:'+$45 starting cash',          apply: p => { p.cash += 45; } },
   { name:'Early Mover',     icon:'🏃', desc:'Start with a free company',   apply: p => { const c=GS.companies.filter(x=>x.ownerId===null).sort((a,b)=>a.baseValue-b.baseValue)[0]; if(c) c.ownerId=p.id; } },
   { name:'Stock Portfolio', icon:'📈', desc:'1 share in Tech & Finance',   apply: p => { [0,1].forEach(i=>{ if(GS.sectors[i].sharesLeft>0){ p.stocks[i]=(p.stocks[i]||0)+1; GS.sectors[i].sharesLeft--; } }); } },
-  { name:'War Chest',       icon:'⚔', desc:'+$50 cash & +2 attack power', apply: p => { p.cash+=50; p.ceo={...p.ceo,attackBonus:p.ceo.attackBonus+2}; } },
+  { name:'War Chest',       icon:'⚔', desc:'+$50 cash & +5 attack power', apply: p => { p.cash+=50; p.ceo={...p.ceo,attackBonus:p.ceo.attackBonus+5}; } },
   { name:'Insider',         icon:'🛡', desc:'Iron Fortress pre-activated', apply: p => { p.fortified=true; } },
 ];
 const SECTORS = [
@@ -192,7 +192,7 @@ function initGameData(numAI) {
         id: cid++, name, regionIdx: ri, ownerId: null,
         level: 1, upgrades: 0, initRevenue: baseRev, revenue: baseRev,
         baseValue: 32 + Math.floor(Math.random()*18),
-        sectorId: ri % SECTORS.length, failedTakeoversAgainst:0,
+        sectorId: Math.floor(Math.random() * SECTORS.length), failedTakeoversAgainst:0,
         volatile: false, _traitDef: 0, _evtDef: 0, trait: null,
       };
       if (Math.random() < 0.3) {
@@ -211,6 +211,8 @@ function startGame() {
   const playerName = (nameEl?.value?.trim().toUpperCase() || 'YOU').replace(/[^A-Z0-9]/g,'') || 'YOU';
   initGameData(numAI);
   if (GS.players[0]) GS.players[0].name = playerName;
+  // Human advantage: +$20 cash in 1v3, +$10 in 1v1 — offsets AI optimality
+  if (GS.players[0]) GS.players[0].cash += numAI >= 3 ? 20 : 10;
   setPhase(1);
   buildBonusPreview(numAI + 1);
   GS.players.forEach((p, i) => startupBonuses[i]?.apply(p));
@@ -237,8 +239,9 @@ function rollPhase() {
     setPhase(3); // Force CRASH phase in final round if not yet seen
     return;
   }
-  // Normal phase weighting
-  let w = r<=2 ? [2,5,2,1] : r<=4 ? [2,3,3,2] : [1,2,3,4];
+  // Normal phase weighting — calmer start, tension builds late
+  // R1-2: mostly stable · R3-4: balanced · R5+: late tension but not always crash
+  let w = r<=2 ? [2,6,1,1] : r<=4 ? [2,4,2,2] : [1,2,3,3];
   const tot = w.reduce((a,b)=>a+b,0);
   for (let attempt=0; attempt<20; attempt++) {
     let x = Math.random()*tot;
@@ -272,24 +275,14 @@ function updateRegionControl() {
   });
 }
 
-function calcBaseRevenue(p) {
-  let rev=0; const ph=GS.phase, pen=p._revPenalty||1;
-  GS.companies.forEach(c => {
-    if (c.ownerId!==p.id) return;
-    let r = c.revenue*ph.revMult*pen;
-    if (GS.regions[c.regionIdx].controller===p.id) r+=5*ph.revMult;
-    rev += r;
-  });
-  Object.entries(p.stocks).forEach(([sid,qty]) => { const s=GS.sectors[sid]; if(s) rev+=Math.round(s.price/5)*qty; });
-  return Math.floor(rev);
-}
+/* calcBaseRevenue removed — calcRevenue() is the sole revenue function */
 
 function calcRevenue(p) {
   let rev=0; const ph=GS.phase, pen=p._revPenalty||1;
   const myCompanies = GS.companies.filter(c => c.ownerId===p.id);
   // Option C: diminishing returns — each extra company yields slightly less
   // 1 co=×1.0, 2=×0.93, 3=×0.87, 4=×0.82, 5=×0.78  (natural market saturation)
-  const efficiencyFactor = 1 / (1 + 0.08 * Math.max(0, myCompanies.length - 1));
+  const efficiencyFactor = 1 / (1 + 0.05 * Math.max(0, myCompanies.length - 1));
   myCompanies.forEach(c => {
     let r = c.revenue * ph.revMult * (0.80 + Math.random()*0.40) * pen * efficiencyFactor;
     if (c.volatile) r *= (0.55 + Math.random()*0.90); // volatile: wider ±45% swing
@@ -300,7 +293,7 @@ function calcRevenue(p) {
   Object.entries(p.stocks).forEach(([sid,qty]) => {
     const s=GS.sectors[sid]; if(!s) return;
     const divYield = (0.65 + Math.random()*0.70); // 65%–135% of base div
-    rev += Math.round((s.price / 5) * divYield) * qty;
+    rev += (s.price / 5) * divYield * qty;
   });
   return Math.floor(rev);
 }
@@ -323,10 +316,10 @@ function calcTakeover(attackerIdx, company) {
   const mid = Math.floor(sortedCash.length/2);
   const medianCash = sortedCash.length%2 ? sortedCash[mid] : (sortedCash[mid-1]+sortedCash[mid])/2;
   const cappedCash = Math.min(att.cash, Math.max(medianCash * 1.5, 80)); // floor of 80 so early game still works
-  const A = (cappedCash*0.15)+att.ceo.attackBonus+(GS.phase.toMod*60);
+  const A = (cappedCash*0.05)+att.ceo.attackBonus+(GS.phase.toMod*25);
   const regionBonus = (GS.regions[company.regionIdx].controller===defIdx)?6:0;
   const D = 6+company.level*3+company.upgrades*2+regionBonus+(def?def.ceo.defenseBonus:0)+(company._traitDef||0)+(company._evtDef||0);
-  const P    = Math.max(0.05, Math.min(0.93, A/(A+D)));
+  const P    = Math.max(0.05, Math.min(0.88, A/(A+D))); // cap at 88% — no takeover should be near-certain
   const cost = Math.floor(company.baseValue*1.20+company.upgrades*14+company.level*10);
   return { A:Math.round(A), D:Math.round(D), P, cost };
 }
@@ -356,9 +349,10 @@ function applyUpgrade(company, free=false) {
 async function endTurn() {
   if (!isMyTurn() || GS.gameOver) return;
   SFX.endTurn();
-  GS.currentPlayerIdx = 1;
+  const humanSlot = mySlot();
+  GS.currentPlayerIdx = humanSlot + 1; // advance past human — AI loop picks up from here
   clearAction(); updateTurnUI();
-  for (let ai = 1; ai < GS.players.length; ai++) {
+  for (let ai = humanSlot + 1; ai < GS.players.length; ai++) {
     if (!GS.players[ai].isHuman) await runAITurn(ai);
   }
   endRound();
@@ -377,15 +371,16 @@ async function runAITurn(pid) {
   p.actionsLeft = 3;
   for (let ap = 0; ap < 3; ap++) {
     await sleep(260 + Math.random() * 180);
-    // On last action: if trailing leader by >$80, play a tactic card
+    // On last action: consider playing a tactic card
     if (ap === 2) {
       const leader = GS.players.slice().sort((a,b) => calcNW(b)-calcNW(a))[0];
-      if (leader.id !== pid && calcNW(leader) - calcNW(p) > 80) {
-        const avail = p.tactics.map((t,i) => ({...t,i})).filter(t => !t.used);
-        if (avail.length > 0) {
-          playTactic(pid, avail[0].i);
-          continue;
-        }
+      const gap    = leader.id !== pid ? calcNW(leader) - calcNW(p) : 0;
+      // Play if: trailing leader by >60, OR in rounds 5-6 (use it or lose it), OR cash-poor round 3+
+      const shouldPlay = (gap > 60) || (GS.round >= 5) || (p.cash < 50 && GS.round >= 3);
+      const avail = p.tactics.map((t,i) => ({...t,i})).filter(t => !t.used);
+      if (shouldPlay && avail.length > 0) {
+        playTactic(pid, avail[0].i);
+        continue;
       }
     }
     aiDecide(pid);
@@ -426,11 +421,14 @@ function aiDecide(pid) {
 
   /* ── Acquire (blocked if _noAcquire from Hostile Press) ── */
   if (!p._noAcquire && unowned.length > 0) {
-    const t = [...unowned].sort((a, b) => a.baseValue - b.baseValue)[0];
-    if (p.cash >= t.baseValue) {
-      const ev = t.revenue * 3 - t.baseValue;
+    // Sort by EV not just cheapest — revenue matters more than price
+    const candidates = [...unowned].filter(t => p.cash >= t.baseValue);
+    candidates.forEach(t => {
+      // Boosted multiplier (was 3) — acquiring is a long-term investment worth 5× forward revenue
+      const boardBonus = mine.length < 2 ? 25 : 0; // encourage early board presence
+      const ev = t.revenue * 5 - t.baseValue + boardBonus;
       if (ev > bestEV) { bestEV = ev; best = { type:'acquire', t }; }
-    }
+    });
   }
 
   /* ── Takeover — +20 EV bonus when targeting the leader's companies ── */
@@ -442,7 +440,7 @@ function aiDecide(pid) {
     }
     tgts.forEach(c => {
       const tk = calcTakeover(pid, c);
-      const minP = style === 'aggressive' ? 0.20 : 0.30;
+      const minP = style === 'aggressive' ? 0.38 : 0.45;
       if (tk.P < minP || p.cash < tk.cost) return;
       const gain = calcCompanyValue(c);
       const loss = tk.cost * 0.5;
@@ -516,11 +514,11 @@ function aiDecide(pid) {
     } else {
       const ret  = Math.floor(tk.cost * 0.5);
       const lost = tk.cost - ret;
-      p._lastTOFail = lost; // track for Sovereign Bailout
+      p._lastTOFail = lost;
+      p.cash += ret; // Return immediately — no setTimeout (fires at wrong time)
       c.failedTakeoversAgainst++;
       GS._marketInstability = Math.min(3, GS._marketInstability + 1);
-      setTimeout(() => { p.cash += ret; render(); }, 1900);
-      glog(`${p.name} takeover failed: ${c.name}`, 'info');
+      glog(`${p.name} takeover failed: ${c.name} — $${ret} returned`, 'info');
     }
   }
   else if (best.type === 'invest') {
@@ -614,7 +612,16 @@ function rollEvent() {
 function isBankrupt(p) {
   const hasCompanies = GS.companies.some(c => c.ownerId === p.id);
   const hasStocks    = Object.values(p.stocks || {}).some(q => q > 0);
-  return p.cash <= 0 && !hasCompanies && !hasStocks;
+  // Hard broke: no cash, no assets
+  if (p.cash <= 0 && !hasCompanies && !hasStocks) return true;
+  // Economic zombie: no revenue sources and can't afford ANY available company — stranded from round 3
+  if (!hasCompanies && !hasStocks && GS.round >= 3) {
+    const cheapest = GS.companies
+      .filter(c => c.ownerId === null)
+      .reduce((min, c) => Math.min(min, c.baseValue), Infinity);
+    if (p.cash < cheapest) return true;
+  }
+  return false;
 }
 
 function checkBankruptcy() {
