@@ -12,6 +12,25 @@
    4. mpApplyState hides overlays on first packet
 ════════════════════════════════════════════════ */
 
+/* ─────────────────────────────────────────────
+   PEERJS CONFIG — public PeerJS signaling server
+   Game data is fully peer-to-peer (WebRTC).
+   Signaling server only brokers the handshake.
+───────────────────────────────────────────── */
+function makePeerCfg() {
+  return {
+    debug: 0,
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+      ]
+    }
+  };
+}
+
+
 function setupTab(tab) {
   document.getElementById('stab-solo').classList.toggle('active', tab === 'solo');
   document.getElementById('stab-online').classList.toggle('active', tab === 'online');
@@ -100,15 +119,7 @@ function mpInitHost() {
   setLobbyStatus('connecting', 'Opening connection server…');
 
   try {
-    MP.peer = new Peer(mpPeerId(MP.roomCode, 0), {
-      debug: 0,
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-        ]
-      }
-    });
+    MP.peer = new Peer(mpPeerId(MP.roomCode, 0), makePeerCfg());
   } catch(e) {
     setLobbyStatus('err', 'PeerJS not available — check internet connection.');
     return;
@@ -158,11 +169,21 @@ function mpInitHost() {
       const slot = MP.slots.findIndex((s, i) => i > 0 && !s.filled);
       if (slot === -1) { conn.send({type:'full'}); conn.close(); return; }
       MP.conns[conn.peer] = conn;
-      MP.slots[slot] = { name:`Player ${slot+1}`, filled:true, ready:false, peerId:conn.peer, isLocal:false };
+      // Apply any pending name that arrived before open (ready before assigned)
+      const pendingName = MP._pendingNames?.[conn.peer];
+      MP.slots[slot] = {
+        name: pendingName || `Player ${slot+1}`,
+        filled: true,
+        ready: !!pendingName, // already ready if we got their message early
+        peerId: conn.peer,
+        isLocal: false
+      };
+      if (pendingName && MP._pendingNames) delete MP._pendingNames[conn.peer];
       conn.send({ type:'assigned', slot, roomCode:MP.roomCode });
       mpHostBroadcast({ type:'lobby', slots: MP.slots });
       setLobbyStatus('ok', `${Object.keys(MP.conns).length} player(s) connected — waiting for ready…`);
       renderLobby();
+      if (pendingName) mpCheckStartable();
     });
   });
 
@@ -178,12 +199,15 @@ function mpHostReceive(data, peerId) {
     const slot = MP.slots.findIndex(s => s.peerId === peerId);
     if (slot !== -1) {
       MP.slots[slot].ready = true;
-      // Use the name the client sent; fall back to "Player N"
       if (data.name) MP.slots[slot].name = data.name;
+      mpHostBroadcast({ type:'lobby', slots: MP.slots });
+      renderLobby();
+      mpCheckStartable();
+    } else {
+      // Slot not assigned yet (open hasn't fired) — store name for when it does
+      if (!MP._pendingNames) MP._pendingNames = {};
+      MP._pendingNames[peerId] = data.name;
     }
-    mpHostBroadcast({ type:'lobby', slots: MP.slots });
-    renderLobby();
-    mpCheckStartable();
   }
   // Client missed the initial state packet — resend
   if (data.type === 'requestState') {
@@ -227,25 +251,16 @@ function mpCheckStartable() {
 ───────────────────────────────────────────── */
 function mpInitClient() {
   setLobbyStatus('connecting', `Connecting to room ${MP.roomCode}…`);
-  const peerCfg = {
-    debug: 0,
-    config: {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-      ]
-    }
-  };
+  let _connectAttempt = 0;  // reset each time mpInitClient is called fresh
+  const MAX_ATTEMPTS  = 4;
+
   try {
     const clientId = `corpdom-${MP.roomCode}-c${Date.now()}`;
-    MP.peer = new Peer(clientId, peerCfg);
+    MP.peer = new Peer(clientId, makePeerCfg());
   } catch(e) {
     setLobbyStatus('err', 'PeerJS not available — check internet connection.');
     return;
   }
-
-  let _connectAttempt = 0;
-  const MAX_ATTEMPTS  = 4;
 
   function attemptConnect() {
     _connectAttempt++;
@@ -314,8 +329,7 @@ function mpClientReceive(data) {
   if (data.type === 'assigned') {
     MP.localSlot = data.slot;
     setLobbyStatus('ok', `Joined as Player ${data.slot + 1} — waiting for host to start…`);
-    // Send ready immediately with our name
-    if (MP.hostConn?.open) MP.hostConn.send({ type:'ready', name: MP.playerName });
+    // ready was already sent in conn.on('open') — do NOT send again here
   }
   if (data.type === 'lobby') {
     MP.slots = data.slots;
@@ -419,13 +433,16 @@ function mpClientBeginGame(data) {
   document.getElementById('lobby-overlay').classList.remove('show');
   document.getElementById('setup-overlay').style.display = 'none';
   setInfo('⏳ Waiting for host to send game state…');
-  // Show chat button
   const chatBtn = document.getElementById('chat-btn');
   if (chatBtn) { chatBtn.style.display = 'flex'; chatBtn.classList.add('mp-active'); }
-  // If host already sent state before this callback fired, request resend
-  if (MP.hostConn && MP.hostConn.open) {
-    MP.hostConn.send({ type: 'requestState' });
-  }
+  // Request state after a short delay — host broadcasts immediately after sending 'start',
+  // but the 'start' and 'state' packets may arrive out of order on slow connections.
+  // Only request if state hasn't arrived within 2 seconds.
+  const _stateTimeout = setTimeout(() => {
+    if (GS.round === 1 && GS.players.length === 0 && MP.hostConn?.open) {
+      MP.hostConn.send({ type: 'requestState' });
+    }
+  }, 2000);
 }
 
 /* ─────────────────────────────────────────────
@@ -602,7 +619,12 @@ function mpExecuteRemoteAction(data, slotIdx) {
           const ep  = Math.max(0.05, tk.P - fp);
           const roll = Math.random();
           if (roll <= ep) { c.ownerId = slotIdx; GS.stats.tos[slotIdx]++; glog(`${p.name} ⚔ captured ${c.name}`, 'warn'); }
-          else { const ret=Math.floor(tk.cost*.5); const lost=tk.cost-ret; p._lastTOFail=lost; c.failedTakeoversAgainst++; GS._marketInstability = Math.min(3, GS._marketInstability + 1); setTimeout(()=>{p.cash+=ret; mpBroadcastState();},1900); glog(`${p.name} takeover failed: ${c.name}`, 'info'); }
+          else {
+            const ret=Math.floor(tk.cost*.5); const lost=tk.cost-ret;
+            p._lastTOFail=lost; p.cash+=ret; // immediate — no setTimeout, prevents stale state broadcast race
+            c.failedTakeoversAgainst++; GS._marketInstability = Math.min(3, GS._marketInstability + 1);
+            glog(`${p.name} takeover failed: ${c.name}`, 'info');
+          }
           updateRegionControl(); updateStockPrices();
         }
       }
@@ -928,13 +950,28 @@ if (typeof doTakeover === 'function') {
 if (typeof doStockBuy === 'function') {
   const _doStockBuy = doStockBuy;
   globalThis.doStockBuy = function(sid) {
-    if (MP.active && !MP.isHost) { mpClientAction({action:'stockBuy',sid}); closeModal(); clearAction(); return; }
+    if (MP.active && !MP.isHost) {
+      if (mpClientAction({action:'stockBuy',sid})) {
+        const p = GS.players[MP.localSlot];
+        // Re-open stock modal if still have actions, otherwise close
+        if (p && p.actionsLeft > 0) { closeModal(); showStocksModal(); }
+        else { closeModal(); clearAction(); }
+      }
+      return;
+    }
     _doStockBuy(sid);
     if (MP.active && MP.isHost) mpBroadcastState();
   };
 } else {
   globalThis.doStockBuy = function(sid) {
-    if (MP.active && !MP.isHost) { mpClientAction({action:'stockBuy',sid}); closeModal(); clearAction(); return; }
+    if (MP.active && !MP.isHost) {
+      if (mpClientAction({action:'stockBuy',sid})) {
+        const p = GS.players[MP.localSlot];
+        if (p && p.actionsLeft > 0) { closeModal(); showStocksModal(); }
+        else { closeModal(); clearAction(); }
+      }
+      return;
+    }
     console.warn('doStockBuy called before core is defined');
   };
 }
@@ -942,13 +979,27 @@ if (typeof doStockBuy === 'function') {
 if (typeof doStockSell === 'function') {
   const _doStockSell = doStockSell;
   globalThis.doStockSell = function(sid) {
-    if (MP.active && !MP.isHost) { mpClientAction({action:'stockSell',sid}); closeModal(); clearAction(); return; }
+    if (MP.active && !MP.isHost) {
+      if (mpClientAction({action:'stockSell',sid})) {
+        const p = GS.players[MP.localSlot];
+        if (p && p.actionsLeft > 0) { closeModal(); showStocksModal(); }
+        else { closeModal(); clearAction(); }
+      }
+      return;
+    }
     _doStockSell(sid);
     if (MP.active && MP.isHost) mpBroadcastState();
   };
 } else {
   globalThis.doStockSell = function(sid) {
-    if (MP.active && !MP.isHost) { mpClientAction({action:'stockSell',sid}); closeModal(); clearAction(); return; }
+    if (MP.active && !MP.isHost) {
+      if (mpClientAction({action:'stockSell',sid})) {
+        const p = GS.players[MP.localSlot];
+        if (p && p.actionsLeft > 0) { closeModal(); showStocksModal(); }
+        else { closeModal(); clearAction(); }
+      }
+      return;
+    }
     console.warn('doStockSell called before core is defined');
   };
 }
