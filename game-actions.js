@@ -206,7 +206,7 @@ function handleCompanyClick(cid) {
         <div class="cb-num" style="${cantAfford||isAntitrust?'color:var(--red-lt)':''}">$${tk.cost}</div>
         <div class="cb-sub">
           <span style="color:var(--green-lt)">WIN</span>: company is yours &nbsp;·&nbsp;
-          <span style="color:var(--red-lt)">FAIL</span>: lose $${Math.floor(tk.cost * .5)}, recover $${Math.ceil(tk.cost * .5)} next round
+          <span style="color:var(--red-lt)">FAIL</span>: lose $${Math.floor(tk.cost * .5)}, recover $${Math.ceil(tk.cost * .5)} immediately
         </div>
       </div>
       ${fortW}
@@ -376,15 +376,15 @@ function resolveTakeover(ok, c, def, cost, p, roll, effP) {
   if (ok) {
     c.ownerId = p.id;
     GS.stats.tos[p.id]++;
-    glog(`🏆 Takeover SUCCESS: ${c.name} from ${def.name}  [${roll.toFixed(3)} ≤ ${effP.toFixed(3)}]`, 'good');
+    glog(`🏆 Takeover SUCCESS — ${c.name} seized from ${def.name}`, 'good');
   } else {
     const lost = Math.floor(cost * 0.5);
     const ret  = cost - lost;
-    p._lastTOFail = lost; // Sovereign Bailout can recover this
+    p._lastTOFail = lost;
+    p.cash += ret; // Immediate refund — consistent with AI, prevents false bankruptcy at round end
     c.failedTakeoversAgainst++;
     GS._marketInstability = Math.min(3, (GS._marketInstability || 0) + 1);
-    setTimeout(() => { p.cash += ret; glog(`+$${ret} returned from failed takeover.`, 'info'); render(); }, 1900);
-    glog(`💀 Takeover FAILED: ${c.name}. Lost $${lost} · $${ret} returns next turn.  [roll ${roll.toFixed(3)}]`, 'bad');
+    glog(`💀 Takeover FAILED — ${c.name} held by ${def.name}. Lost $${lost}, $${ret} refunded.`, 'bad');
   }
   updateRegionControl(); updateStockPrices(); render();
 }
@@ -402,7 +402,7 @@ function doStockBuy(sid) {
   s.sharesLeft--; s.demand++;
   p.actionsLeft--;
   SFX.buy();
-  glog(`${p.name} bought ${s.name} @ $${cost}  (div $${Math.round(s.price / 5)}/round)`, 'good');
+  glog(`${p.name} bought ${s.name} stock @ $${cost}  (earns ~$${Math.round(s.price / 5)}/round, varies with market)`, 'good');
   updateStockPrices(); render(); renderRightSidebar();
   // Refresh modal if still open, otherwise clearAction handles auto-end
   if (p.actionsLeft > 0) { closeModal(); showStocksModal(); }
@@ -456,7 +456,8 @@ function playTactic(pid, i) {
   if (t.used) return;
   t.used = true;
   t.action(p);
-  if (pid === mySlot()) { p.actionsLeft--; clearAction(); }
+  p.actionsLeft--; // Always decrement — AI tactics cost an action too
+  if (pid === mySlot()) clearAction();
   render();
 }
 
