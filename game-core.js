@@ -91,7 +91,7 @@ const GS = {
   selectedAction:null, lastHoveredTak:null, gameOver:false, numAI:3,
   currentEvent:null, _skipNextEvent:false, roundPhasesIdx:[],
   stats:{ toa:[], tos:[], rev:[], peak:[] },
-  _marketInstability:0,
+  _marketInstability:0, _endGameShown:false,
 };
 const MP = {
   active:   false,
