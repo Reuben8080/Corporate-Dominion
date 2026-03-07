@@ -622,7 +622,7 @@ function mpApplyState(gs) {
     if (typeof showRoundSummary === 'function' && Object.keys(GS._roundRev || {}).length) {
       showRoundSummary(GS._roundRev);
     }
-    setTimeout(showPhaseAnnounce, 5300); // fires after summary fades (5s)
+    setTimeout(showPhaseAnnounce, 7300); // fires after summary fades (7s)
   }
 
   render();
