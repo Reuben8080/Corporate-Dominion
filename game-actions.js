@@ -282,8 +282,7 @@ function doAcquire(cid) {
   }
   p.cash -= c.baseValue; c.ownerId = slot; p.actionsLeft--;
   SFX.acquire();
-  glog(`${p.name} acquired ${c.name} ($${c.baseValue})`, 'good');
-  actionFeedPush(_pickQuip(ACQ_QUIPS), p.color, false);
+  glog(`${p.name} acquired ${c.name} ($${c.baseValue}) — ${_pickQuip(ACQ_QUIPS)}`, 'good');
   updateRegionControl(); updateStockPrices(); render(); clearAction();
 }
 
@@ -295,8 +294,7 @@ function doUpgrade(cid) {
   if (!applyUpgrade(c)) { glog('Insufficient funds for upgrade.', 'bad'); return; }
   p.actionsLeft--;
   SFX.upgrade();
-  glog(`${p.name} upgraded ${c.name} → Lv${c.level}`, 'good');
-  actionFeedPush(_pickQuip(UPG_QUIPS), p.color, false);
+  glog(`${p.name} upgraded ${c.name} → Lv${c.level} — ${_pickQuip(UPG_QUIPS)}`, 'good');
   updateStockPrices(); render(); clearAction();
 }
 
@@ -312,8 +310,7 @@ function doSell(cid) {
   c.revenue  = c.initRevenue;
   c._traitDef = c.trait ? 3 : 0;
   SFX.sellco();
-  glog(`${p.name} sold ${c.name} for $${sp}`, 'warn');
-  actionFeedPush(_pickQuip(SELL_CO_QUIPS), p.color, false);
+  glog(`${p.name} sold ${c.name} for $${sp} — ${_pickQuip(SELL_CO_QUIPS)}`, 'warn');
   updateRegionControl(); updateStockPrices(); render(); clearAction();
 }
 
@@ -407,9 +404,7 @@ function resolveTakeover(ok, c, def, cost, p, roll, effP) {
   if (ok) {
     c.ownerId = p.id;
     GS.stats.tos[p.id]++;
-    const q = _pickQuip(TO_WIN_QUIPS(p, def));
-    glog(`🏆 Takeover SUCCESS — ${c.name} seized from ${def.name}.`, 'good');
-    actionFeedPush(q, p.color, true);
+    glog(`🏆 Takeover SUCCESS — ${c.name} seized from ${def.name}. ${_pickQuip(TO_WIN_QUIPS(p, def))}`, 'good');
   } else {
     const lost = Math.floor(cost * 0.5);
     const ret  = cost - lost;
@@ -417,9 +412,7 @@ function resolveTakeover(ok, c, def, cost, p, roll, effP) {
     p.cash += ret;
     c.failedTakeoversAgainst++;
     GS._marketInstability = Math.min(3, (GS._marketInstability || 0) + 1);
-    const q = _pickQuip(TO_FAIL_QUIPS(p, def));
-    glog(`💀 Takeover FAILED — ${c.name} held by ${def.name}. Lost $${lost}, $${ret} refunded.`, 'bad');
-    actionFeedPush(q, def.color, true);
+    glog(`💀 Takeover FAILED — ${c.name} held by ${def.name}. Lost $${lost}, $${ret} refunded. ${_pickQuip(TO_FAIL_QUIPS(p, def))}`, 'bad');
   }
   updateRegionControl(); updateStockPrices(); render();
 }
@@ -437,8 +430,7 @@ function doStockBuy(sid) {
   s.sharesLeft--; s.demand++;
   p.actionsLeft--;
   SFX.buy();
-  glog(`${p.name} bought ${s.name} stock @ $${cost}`, 'good');
-  actionFeedPush(_pickQuip(STOCK_BUY_QUIPS), p.color, false);
+  glog(`${p.name} bought ${s.name} stock @ $${cost} — ${_pickQuip(STOCK_BUY_QUIPS)}`, 'good');
   updateStockPrices(); render(); renderRightSidebar();
   // Refresh modal if still open, otherwise clearAction handles auto-end
   if (p.actionsLeft > 0) { closeModal(); showStocksModal(); }
@@ -456,8 +448,7 @@ function doStockSell(sid) {
   s.sharesLeft++; s.demand = Math.max(0, s.demand - 1);
   p.actionsLeft--;
   SFX.sell();
-  glog(`${p.name} sold ${s.name} @ $${s.price}`, 'warn');
-  actionFeedPush(_pickQuip(STOCK_SELL_QUIPS), p.color, false);
+  glog(`${p.name} sold ${s.name} @ $${s.price} — ${_pickQuip(STOCK_SELL_QUIPS)}`, 'warn');
   updateStockPrices(); render(); renderRightSidebar();
   if (p.actionsLeft > 0) { closeModal(); showStocksModal(); }
   else { closeModal(); clearAction(); }
