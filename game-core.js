@@ -91,7 +91,7 @@ const GS = {
   selectedAction:null, lastHoveredTak:null, gameOver:false, numAI:3,
   currentEvent:null, _skipNextEvent:false, roundPhasesIdx:[],
   stats:{ toa:[], tos:[], rev:[], peak:[] },
-  _marketInstability:0, _endGameShown:false,
+  _marketInstability:0, _endGameShown:false, _roundRev:{},
 };
 const MP = {
   active:   false,
@@ -555,6 +555,7 @@ function endRound() {
     p.fortified    = false;
     p._revPenalty  = 1;
   });
+  GS._roundRev = _roundRevMap; // persisted on GS so mpSerialiseGS can include it
 
   /* End-of-round stock drift — volatile with occasional sector shocks */
   GS.sectors.forEach(s => {
