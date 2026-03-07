@@ -382,6 +382,17 @@ function mpClientReceive(data) {
     setLobbyStatus('ok', `Joined as Player ${data.slot + 1} — waiting for host to start…`);
     // ready was already sent in conn.on('open') — do NOT send again here
   }
+  if (data.type === 'takeover_anim') {
+    // Show the real animation for everyone — attacker no longer pre-animates with a fake roll
+    if (typeof _showDiceAnimation === 'function') {
+      _showDiceAnimation(data.effP, data.companyName, data.attackerName, data.defenderName, null, data.roll);
+    }
+    // Write quip to log as overlay closes (~2.4s)
+    if (data.logLine) {
+      setTimeout(() => glog(data.logLine, data.logType || 'info'), 2400);
+    }
+    return;
+  }
   if (data.type === 'lobby') {
     MP.slots = data.slots;
     renderLobby();
@@ -583,7 +594,7 @@ function mpApplyState(gs) {
   // ── Overlay / UI state ──
   document.getElementById('setup-overlay').style.display = 'none';
   document.getElementById('lobby-overlay').classList.remove('show');
-  document.querySelectorAll('.leave-sidebar-btn').forEach(b => b.style.display = 'flex');
+  document.body.classList.add('game-active');
   const chatBtn = document.getElementById('chat-btn');
   if (chatBtn) { chatBtn.style.display = 'flex'; chatBtn.classList.add('mp-active'); }
 
@@ -762,14 +773,65 @@ function mpExecuteRemoteAction(data, slotIdx) {
           const fp  = def.fortified ? 0.15 : 0; if(def.fortified) def.fortified=false;
           const ep  = Math.max(0.05, tk.P - fp);
           const roll = Math.random();
-          if (roll <= ep) { c.ownerId = slotIdx; GS.stats.tos[slotIdx]++; glog(`${p.name} ⚔ captured ${c.name}`, 'warn'); }
+          const ok   = roll <= ep;
+          const def2 = def; // alias for quip closures
+          const _toWinQ = [
+            `${def2.name} didn't see that coming. Nobody did.`,
+            `The keys have changed hands. ${def2.name} is advised not to make eye contact.`,
+            `Hostile? ${p.name} prefers the term 'enthusiastic acquisition.'`,
+            `${def2.name} had it for all of five minutes. Touching.`,
+            `The board voted unanimously. ${def2.name} wasn't on the board.`,
+            `Money talked. ${def2.name} did not talk back fast enough.`,
+            `A masterclass in corporate aggression. ${def2.name} will remember this.`,
+          ];
+          const _toFailQ = [
+            `${def2.name} held firm. ${p.name} held a receipt.`,
+            `${def2.name} laughs all the way to their own bank.`,
+            `Expensive lesson. ${p.name} has learned nothing.`,
+            `Bold strategy. Bolder failure.`,
+            `The market has judged ${p.name}. The verdict: embarrassing.`,
+            `${def2.name} repels the attack. Barely even notices, honestly.`,
+          ];
+          if (ok) { c.ownerId = slotIdx; GS.stats.tos[slotIdx]++; }
           else {
             const ret=Math.floor(tk.cost*.5); const lost=tk.cost-ret;
-            p._lastTOFail=lost; p.cash+=ret; // immediate — no setTimeout, prevents stale state broadcast race
+            p._lastTOFail=lost; p.cash+=ret;
             c.failedTakeoversAgainst++; GS._marketInstability = Math.min(3, GS._marketInstability + 1);
-            glog(`${p.name} takeover failed: ${c.name}`, 'info');
           }
           updateRegionControl(); updateStockPrices();
+
+          // Build a single log line with quip — broadcast in the anim packet so ALL
+          // four players (host, attacker, defender, spectator) write it to their own log
+          // at the same moment the animation overlay closes (~2.4s).
+          const logLine = ok
+            ? `${p.name} ⚔ captured ${c.name}. ${_toWinQ[Math.floor(Math.random()*_toWinQ.length)]}`
+            : `${p.name} takeover failed: ${c.name}. ${_toFailQ[Math.floor(Math.random()*_toFailQ.length)]}`;
+          const animPkt = {
+            type: 'takeover_anim',
+            effP: ep, roll,
+            companyName:  c.name,
+            attackerName: p.name,
+            defenderName: def.name,
+            attackerSlot: slotIdx,
+            ok,
+            logLine,      // clients glog this so everyone sees the quip
+            logType: ok ? 'warn' : 'info',
+          };
+          mpHostBroadcast(animPkt);
+          // Host always shows animation (for their own turn or as spectator/defender)
+          if (typeof _showDiceAnimation === 'function') {
+            _showDiceAnimation(ep, c.name, p.name, def.name, null, roll);
+          }
+          // Host writes quip to log as overlay closes, same timing as clients
+          setTimeout(() => glog(logLine, ok ? 'warn' : 'info'), 2400);
+
+          // Delay state broadcast to let animation play before board updates
+          GS.currentPlayerIdx = prevIdx; render();
+          setTimeout(() => {
+            GS.currentPlayerIdx = prevIdx; // re-set in case of re-render
+            mpBroadcastState();
+          }, 2800);
+          return; // skip the broadcast at the bottom of the function
         }
       }
       break;
@@ -1061,30 +1123,32 @@ if (typeof doTakeover === 'function') {
   const _doTakeover = doTakeover;
   globalThis.doTakeover = function(cid, cost, prob) {
     if (MP.active && !MP.isHost) {
-      closeModal();
-      clearAction();
-      // Show dice animation on client — visual only, host resolves the real outcome
-      const c   = GS.companies.find(x => x.id === cid);
-      const def = c && c.ownerId !== null ? GS.players[c.ownerId] : null;
-      const me  = GS.players[MP.localSlot];
-      if (c && def && me && typeof runDiceDisplay === 'function') {
-        runDiceDisplay(prob, c.name, me.name, def.name);
-      }
+      // Client: skip fake pre-animation — real animation arrives via takeover_anim packet
+      closeModal(); clearAction();
+      setInfo('⚔ Takeover in progress — awaiting outcome…');
       mpClientAction({action:'takeover', cid});
       return;
     }
-    _doTakeover(cid, cost, prob);
-    if (MP.active && MP.isHost) mpBroadcastState();
+    if (MP.active && MP.isHost) {
+      // Host-as-attacker: route through mpExecuteRemoteAction so animation is broadcast
+      // to all players and state is delayed until after animation (fixes async race)
+      closeModal(); clearAction();
+      mpExecuteRemoteAction({ action: 'takeover', cid }, MP.localSlot);
+      return;
+    }
+    _doTakeover(cid, cost, prob); // solo
   };
 } else {
   globalThis.doTakeover = function(cid, cost, prob) {
     if (MP.active && !MP.isHost) {
       closeModal(); clearAction();
-      const c = GS.companies.find(x => x.id === cid);
-      const def = c && c.ownerId !== null ? GS.players[c.ownerId] : null;
-      const me  = GS.players[MP.localSlot];
-      if (c && def && me && typeof runDiceDisplay === 'function') runDiceDisplay(prob, c.name, me.name, def.name);
+      setInfo('⚔ Takeover in progress — awaiting outcome…');
       mpClientAction({action:'takeover', cid});
+      return;
+    }
+    if (MP.active && MP.isHost) {
+      closeModal(); clearAction();
+      mpExecuteRemoteAction({ action: 'takeover', cid }, MP.localSlot);
       return;
     }
     console.warn('doTakeover called before core is defined');
