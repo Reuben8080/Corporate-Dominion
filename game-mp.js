@@ -514,6 +514,7 @@ function mpSerialiseGS() {
     stats:        GS.stats,
     _marketInstability: GS._marketInstability || 0,
     _skipNextEvent:     GS._skipNextEvent || false,
+    _roundRev:          GS._roundRev || {},
     players: GS.players.map(p => ({
       id: p.id, name: p.name, color: p.color, isHuman: p.isHuman, style: p.style,
       cash: p.cash, actionsLeft: p.actionsLeft, stocks: p.stocks,
@@ -530,8 +531,20 @@ function mpSerialiseGS() {
 
 function mpApplyState(gs) {
   const prevRound    = GS.round;
-  const prevGameOver = GS.gameOver; // track so we can fire endGame() exactly once
+  const prevGameOver = GS.gameOver;
 
+  // ── Snapshot BEFORE overwriting — used for action feed diffs ──
+  const prevPlayers   = GS.players.map(p => ({
+    id: p.id, cash: p.cash, actionsLeft: p.actionsLeft,
+    stocks: { ...(p.stocks || {}) },
+    tactics: (p.tactics || []).map(t => ({ used: t.used, name: t.name })),
+  }));
+  const prevCompanies = GS.companies.map(c => ({
+    id: c.id, ownerId: c.ownerId, upgrades: c.upgrades, level: c.level,
+  }));
+  const hadPlayers = GS.players.length > 0;
+
+  // ── Apply new state ──
   GS.round        = gs.round;
   GS.maxRounds    = gs.maxRounds;
   GS.phaseIdx     = gs.phaseIdx;
@@ -545,13 +558,12 @@ function mpApplyState(gs) {
   GS.regions      = gs.regions;
   GS._marketInstability = gs._marketInstability || 0;
   GS._skipNextEvent     = gs._skipNextEvent     || false;
+  GS._roundRev          = gs._roundRev          || {};
 
-  // Restore event
   if (gs.currentEvent) {
     GS.currentEvent = GLOBAL_EVENTS.find(e => e.name === gs.currentEvent) || null;
   } else { GS.currentEvent = null; }
 
-  // Restore players (with tactic action functions)
   GS.players = gs.players.map(p => ({
     ...p,
     _noAcquire:  p._noAcquire  || false,
@@ -563,19 +575,95 @@ function mpApplyState(gs) {
     }),
   }));
 
-  // Ensure overlays are hidden and key UI shown when state arrives
-  document.getElementById('setup-overlay').style.display = 'none';
-  document.getElementById('lobby-overlay').classList.remove('show');
-  document.querySelectorAll('.leave-sidebar-btn').forEach(b => b.style.display = 'flex');
-  // Always ensure chat button is visible (covers case where client missed 'start' packet)
-  const chatBtn = document.getElementById('chat-btn');
-  if (chatBtn) { chatBtn.style.display = 'flex'; chatBtn.classList.add('mp-active'); }
-
-  // Restore companies (with trait objects)
   GS.companies = gs.companies.map(c => ({
     ...c,
     trait: c.trait ? COMPANY_TRAITS.find(t => t.name === c.trait) || null : null,
   }));
+
+  // ── Overlay / UI state ──
+  document.getElementById('setup-overlay').style.display = 'none';
+  document.getElementById('lobby-overlay').classList.remove('show');
+  document.querySelectorAll('.leave-sidebar-btn').forEach(b => b.style.display = 'flex');
+  const chatBtn = document.getElementById('chat-btn');
+  if (chatBtn) { chatBtn.style.display = 'flex'; chatBtn.classList.add('mp-active'); }
+
+  // ── Action feed diff — only when we already had state (skip first packet) ──
+  if (hadPlayers && typeof actionFeedPush === 'function' && !GS.gameOver) {
+    const myId = MP.localSlot;
+
+    // Round boundary — show income summary using host-computed _roundRev
+    if (gs.round > prevRound && Object.keys(GS._roundRev).length) {
+      if (typeof showRoundSummary === 'function') showRoundSummary(GS._roundRev);
+    }
+
+    // Company ownership changes
+    GS.companies.forEach(newC => {
+      const oldC = prevCompanies.find(x => x.id === newC.id);
+      if (!oldC || newC.ownerId === oldC.ownerId) return;
+
+      const newOwner = GS.players.find(p => p.id === newC.ownerId);
+
+      if (newC.ownerId === null) return; // company released — no message needed
+
+      if (oldC.ownerId === null) {
+        // Acquired from unowned
+        if (newOwner && newOwner.id !== myId) {
+          actionFeedPush(`$ ${newOwner.name} acquired ${newC.name}`, newOwner.color, false);
+        }
+      } else if (oldC.ownerId === myId) {
+        // MY company was taken
+        const attacker = newOwner?.name || '?';
+        const color    = newOwner?.color || null;
+        actionFeedPush(`⚔ ${attacker} seized YOUR ${newC.name}!`, color, true);
+      } else {
+        // One opponent took from another
+        const fromPlayer = GS.players.find(p => p.id === oldC.ownerId);
+        const fromName   = fromPlayer?.name || '?';
+        if (newOwner && newOwner.id !== myId) {
+          actionFeedPush(`⚔ ${newOwner.name} captured ${newC.name} from ${fromName}`, newOwner.color, false);
+        }
+      }
+    });
+
+    // Upgrades
+    GS.companies.forEach(newC => {
+      const oldC = prevCompanies.find(x => x.id === newC.id);
+      if (!oldC || newC.upgrades <= oldC.upgrades) return;
+      if (newC.ownerId === null || newC.ownerId === myId) return;
+      const owner = GS.players.find(p => p.id === newC.ownerId);
+      if (!owner) return;
+      const lvUp = newC.level > oldC.level ? ` → Lv${newC.level}!` : '';
+      actionFeedPush(`⬆ ${owner.name} upgraded ${newC.name}${lvUp}`, owner.color, false);
+    });
+
+    // Stock purchases & sales
+    GS.players.forEach(newP => {
+      if (newP.id === myId) return;
+      const oldP = prevPlayers.find(x => x.id === newP.id);
+      if (!oldP) return;
+      Object.entries(newP.stocks || {}).forEach(([sid, qty]) => {
+        const prevQty = oldP.stocks[sid] || 0;
+        if (qty > prevQty) {
+          const sName = GS.sectors[sid]?.name || 'stock';
+          actionFeedPush(`📈 ${newP.name} bought ${sName} stock`, newP.color, false);
+        }
+      });
+    });
+
+    // Tactic card usage
+    GS.players.forEach(newP => {
+      if (newP.id === myId) return;
+      const oldP = prevPlayers.find(x => x.id === newP.id);
+      if (!oldP) return;
+      (newP.tactics || []).forEach((t, i) => {
+        const wasUsed = oldP.tactics[i]?.used || false;
+        if (t.used && !wasUsed) {
+          const danger = t.name === 'Espionage' || t.name === 'Hostile Press' || t.name === 'Market Correction';
+          actionFeedPush(`🃏 ${newP.name} played ${t.name}`, newP.color, danger);
+        }
+      });
+    });
+  }
 
   render();
   renderRoundTrack();
