@@ -126,7 +126,120 @@ function glog(msg, type='info') {
   d.textContent = `[R${GS.round}] ${msg}`;
   el.insertBefore(d, el.firstChild);
   while (el.children.length > 120) el.removeChild(el.lastChild);
+
+  // Push to action feed on mobile when it's not the human's turn
+  if (typeof actionFeedPush === 'function' &&
+      GS.players?.length &&
+      GS.currentPlayerIdx !== mySlot() &&
+      !GS.gameOver &&
+      type !== 'phase') {
+    // Derive player color from message — action messages always start with player name
+    let color = null;
+    const firstWord = msg.split(/[\s:—]/)[0];
+    const matchedP  = GS.players.find(p => p.name === firstWord);
+    if (matchedP) color = matchedP.color;
+
+    // Detect danger: opponent targeting one of your companies
+    const mySlotId = mySlot();
+    const myCompanyNames = GS.companies
+      .filter(c => c.ownerId === mySlotId)
+      .map(c => c.name);
+    const isDanger = (type === 'warn' || type === 'bad') &&
+      myCompanyNames.some(n => msg.includes(n));
+
+    actionFeedPush(msg, color, isDanger);
+  }
 }
+
+/* ════════════════════════════════════════
+   ACTION FEED TICKER
+   Queue of opponent actions shown one at a time
+   above the mobile dock — auto-fades, no tap needed
+════════════════════════════════════════ */
+const _feedQueue  = [];
+let   _feedActive = false;
+let   _feedTimer  = null;
+
+function actionFeedPush(msg, color, isDanger = false) {
+  // Strip leading round tag if present
+  const text = msg.replace(/^\[R\d+\]\s*/, '');
+  _feedQueue.push({ text, color, isDanger });
+  if (!_feedActive) _feedNext();
+}
+
+function _feedNext() {
+  if (!_feedQueue.length) { _feedActive = false; return; }
+  _feedActive = true;
+
+  const { text, color, isDanger } = _feedQueue.shift();
+  const inner = document.getElementById('action-feed-inner');
+  const dot   = document.getElementById('action-feed-dot');
+  const txt   = document.getElementById('action-feed-text');
+  if (!inner || !txt) { _feedActive = false; return; }
+
+  dot.style.background = color || 'var(--tx-lo)';
+  txt.textContent      = text;
+  txt.style.color      = color ? `${color}` : 'var(--tx-hi)';
+
+  inner.classList.remove('visible', 'danger');
+  // Force reflow so transition fires fresh
+  void inner.offsetWidth;
+  inner.classList.add('visible');
+  if (isDanger) inner.classList.add('danger');
+
+  // Danger messages stay 5s, normal 3s; if queue has more, chain faster
+  const hold = isDanger ? 5000 : (_feedQueue.length > 2 ? 2000 : 3000);
+  clearTimeout(_feedTimer);
+  _feedTimer = setTimeout(_feedDismiss, hold);
+}
+
+function _feedDismiss() {
+  const inner = document.getElementById('action-feed-inner');
+  if (!inner) { _feedActive = false; return; }
+  inner.classList.remove('visible', 'danger');
+  // Wait for fade-out then show next
+  setTimeout(_feedNext, 280);
+}
+
+/* ════════════════════════════════════════
+   ROUND SUMMARY CARD
+   Shows income per player for 4s at end of round
+   Called from endRound() before phase announce
+════════════════════════════════════════ */
+function showRoundSummary(revenueMap) {
+  const card  = document.getElementById('round-summary');
+  const inner = document.getElementById('round-summary-inner');
+  const rows  = document.getElementById('round-summary-rows');
+  const title = document.getElementById('round-summary-title');
+  if (!card || !inner || !rows) return;
+
+  title.textContent = `📊 ROUND ${GS.round} INCOME`;
+
+  // Sort by revenue descending
+  const sorted = GS.players
+    .map(p => ({ p, rev: revenueMap[p.id] || 0, nw: calcNW(p) }))
+    .sort((a, b) => b.rev - a.rev);
+
+  rows.innerHTML = sorted.map(({ p, rev, nw }) => `
+    <div class="rsrow">
+      <div class="rsrow-name" style="color:${p.color}">${p.name}</div>
+      <div style="display:flex;gap:10px;align-items:baseline">
+        <div class="rsrow-rev">+$${rev}</div>
+        <div class="rsrow-nw">NW $${nw}</div>
+      </div>
+    </div>`).join('');
+
+  inner.classList.remove('visible');
+  void inner.offsetWidth;
+  inner.classList.add('visible');
+
+  // Auto-dismiss after 4s
+  setTimeout(() => {
+    inner.classList.remove('visible');
+  }, 4000);
+}
+
+
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -247,6 +360,9 @@ function renderTutStep() {
 
   const spot = document.getElementById('tut-spot');
   const card = document.getElementById('tut-card');
+  const isMob = window.innerWidth <= 640;
+  // On mobile the fixed dock is ~170px tall; leave room above it
+  const dockH = isMob ? 176 : 0;
 
   if (s.spotId) {
     const el = document.getElementById(s.spotId);
@@ -254,19 +370,28 @@ function renderTutStep() {
       const r  = el.getBoundingClientRect();
       spot.style.cssText =
         `left:${r.left - 5}px;top:${r.top - 5}px;width:${r.width + 10}px;height:${r.height + 10}px;`;
-      const cW = 295, cH = 210;
-      let cx = r.left;
+      const cW = isMob ? window.innerWidth - 24 : 295;
+      const cH = 220;
+      let cx = isMob ? 12 : r.left;
       let cy = r.bottom + 14;
-      /* Bottom edge clamp */
-      if (cy + cH > window.innerHeight - 8) cy = r.top - cH - 14;
-      /* Right & left edge clamps */
-      cx = Math.max(8, Math.min(window.innerWidth - cW - 8, cx));
-      cy = Math.max(8, cy);
-      card.style.cssText = `left:${cx}px;top:${cy}px;transform:none;`;
+      /* Clamp above dock on mobile, above viewport bottom on desktop */
+      const maxBottom = window.innerHeight - dockH - 8;
+      if (cy + cH > maxBottom) cy = r.top - cH - 14;
+      cy = Math.max(isMob ? 56 : 8, cy); // stay below topbar
+      card.style.cssText = `left:${cx}px;top:${cy}px;transform:none;${isMob?`width:${cW}px;`:''}`;
     }
   } else {
     spot.style.cssText = 'width:0;height:0;box-shadow:0 0 0 0;border:none;';
-    card.style.cssText = 'left:50%;top:50%;transform:translate(-50%,-50%)';
+    if (isMob) {
+      // Center vertically in the safe area between topbar and dock
+      const safeTop = 56, safeBottom = window.innerHeight - dockH;
+      const safeH = safeBottom - safeTop;
+      const cardW = window.innerWidth - 24;
+      const topPos = safeTop + Math.max(0, (safeH - 260) / 2);
+      card.style.cssText = `left:12px;top:${topPos}px;transform:none;width:${cardW}px;`;
+    } else {
+      card.style.cssText = 'left:50%;top:50%;transform:translate(-50%,-50%)';
+    }
   }
 }
 
