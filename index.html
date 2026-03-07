@@ -58,6 +58,7 @@
   --blue-lt: #60a5fa;
   --purple:  #a855f7;
   --indigo:  #6366f1;
+  --indigo-lt: #818cf8;   /* indigo-400 — used for chat, endgame buttons, MP active */
 
   /* ── Radius ── */
   --r:  10px;
@@ -784,6 +785,14 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
 /* ════════════════════════════════════════
    AI OVERLAY
 ════════════════════════════════════════ */
+.ai-overlay-global {
+  position: fixed; inset: 0;
+  display: none; align-items: center; justify-content: center;
+  z-index: 600; pointer-events: none;
+  background: transparent;
+  transition: background .15s ease;
+}
+.ai-overlay-global.show { display: flex; }
 .ai-lbl {
   padding: 8px 20px; border-radius: 20px;
   border: 1px solid var(--border-l); background: rgba(9,9,11,.9);
@@ -876,7 +885,7 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
 ════════════════════════════════════════ */
 #lobby-overlay { position: fixed; inset: 0; background: var(--bg); display: none; align-items: center; justify-content: center; z-index: 920; padding: 16px; }
 #lobby-overlay.show { display: flex; }
-.lobby-box { background: var(--s1); border: 1px solid var(--indigo); border-top: 2px solid var(--indigo); border-radius: var(--r); padding: 26px; width: 100%; max-width: 460px; box-shadow: 0 24px 80px rgba(0,0,0,.7); }
+.lobby-box { background: var(--s1); border: 1px solid var(--indigo); border-top: 2px solid var(--indigo); border-radius: var(--r); padding: 26px; width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 80px rgba(0,0,0,.7); }
 .lobby-title { font-family: var(--font-ui); font-weight: 800; font-size: 18px; color: var(--tx-hi); margin-bottom: 3px; }
 .lobby-sub   { font-family: var(--font-mono); font-size: 9px; color: var(--tx-lo); letter-spacing: .1em; margin-bottom: 20px; }
 .room-code-block { background: var(--s2); border: 1px solid var(--border); border-radius: var(--r2); padding: 14px; text-align: center; margin-bottom: 16px; }
@@ -949,6 +958,14 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
   box-shadow: 0 4px 20px rgba(0,0,0,.5);
 }
 #net-lock.show { display: flex; align-items: center; gap: 6px; }
+/* On desktop the dock is sticky (not fixed) — these toasts float at wrong position.
+   Anchor them to the dock-area on desktop by hiding the fixed ones and letting
+   the mobile override take over at ≤640px. On desktop the net-lock is shown inside
+   the info-strip instead (see updateTurnUI). */
+@media (min-width: 641px) {
+  #auto-end-toast { bottom: 8px; }
+  #net-lock       { bottom: 8px; }
+}
 
 /* ════════════════════════════════════════
    ACTION FEED TICKER (mobile only)
@@ -958,7 +975,7 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
 #action-feed {
   display: none; /* shown only in mobile media query */
   position: fixed;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 200px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 232px);
   left: 50%; transform: translateX(-50%);
   z-index: 210;
   pointer-events: none;
@@ -1008,7 +1025,7 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
 #round-summary {
   display: none;
   position: fixed;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 200px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 284px);
   left: 50%; transform: translateX(-50%);
   z-index: 215; pointer-events: none;
   width: calc(100% - 24px); max-width: 380px;
@@ -1113,6 +1130,9 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
   .reg-name { font-size: 8px; }
   .co-name { font-size: 10px; }
   .co-rev-val { font-size: 14px; }
+  /* Show feed and summary — right sidebar gone, log not visible */
+  #action-feed   { display: block; bottom: 120px; }
+  #round-summary { display: block; bottom: 172px; }
 }
 
 /* ════════════════════════════════════════
@@ -1312,7 +1332,7 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
   /* Hide the separate floating pill — not needed */
   #mobile-end-turn { display: none !important; }
 
-  /* ── BOARD: pad bottom so last cards don't hide under fixed dock ── */
+  /* ── BOARD: pad bottom so last cards don't hide under fixed dock or feed ── */
   #board {
     display: grid !important;
     grid-template-columns: 1fr 1fr;
@@ -1321,7 +1341,7 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
     flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 192px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 278px);
   }
 
   /* ── STOCK BUY/SELL: proper 44px tap targets ── */
@@ -1755,6 +1775,7 @@ button, [onclick], .setup-tab, .mode-card, .dock-btn, .tcard, .cc, .mbtn, .sab {
       <div class="room-code-hint">Tap to copy · Friends enter this in Join Room</div>
     </div>
     <div class="lobby-slots" id="lobby-slots"></div>
+    <div id="lobby-info" style="font-family:var(--font-mono);font-size:10px;color:var(--tx-lo);text-align:center;padding:4px 0 10px;min-height:20px;"></div>
     <div class="lobby-status">
       <div class="lobby-dot connecting" id="lobby-dot"></div>
       <span id="lobby-status-txt">Initialising…</span>
