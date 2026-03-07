@@ -186,16 +186,15 @@ body   { display: flex; flex-direction: column; height: 100vh; height: 100dvh; o
    log-hdr should NOT have margin-top:auto — the log-wrap's flex:1 already fills space above it. */
 .log-hdr { border-top: 1px solid var(--border); flex-shrink: 0; }
 .leave-sidebar-btn {
-  /* Absolute so overflow:hidden on #left cannot clip it — always anchored to bottom of sidebar */
-  position: absolute; bottom: 0; left: 12px; right: 12px;
+  /* Normal flex item — sits below log-wrap, always visible */
   display: flex;
+  flex-shrink: 0;
+  margin: 8px 10px 10px;
   padding: 10px 0; border-radius: var(--r2);
   background: rgba(244,63,94,.08); border: 1px solid rgba(244,63,94,.35);
   color: var(--red-lt); font-family: var(--font-mono); font-size: 10px;
   font-weight: 700; letter-spacing: .1em; cursor: pointer;
   transition: all var(--t-fast);
-  flex-shrink: 0;
-  margin-bottom: 10px;
   align-items: center; justify-content: center; gap: 6px;
   touch-action: manipulation;
 }
@@ -231,7 +230,7 @@ body:not(.game-active) .leave-sidebar-btn { display: none; }
 .pe-bar  { height: 3px; flex: 1; border-radius: 2px; transition: all var(--t-med); }
 
 /* Activity log */
-#log-wrap { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 58px; }
+#log-wrap { flex: 1; min-height: 0; overflow-y: auto; }
 #log-area  { padding: 4px 6px; }
 .le {
   font-family: var(--font-mono); font-size: 8px; line-height: 1.6;
