@@ -383,22 +383,23 @@ function mpClientReceive(data) {
     // ready was already sent in conn.on('open') — do NOT send again here
   }
   if (data.type === 'takeover_anim') {
-    // Show the real animation for everyone — attacker no longer pre-animates with a fake roll
+    // Show the real animation for everyone
     if (typeof _showDiceAnimation === 'function') {
       _showDiceAnimation(data.effP, data.companyName, data.attackerName, data.defenderName, null, data.roll);
     }
-    // Write log entry + push quip to feed as overlay closes (~2.4s)
+    // Write log entry at animation end — feed is handled by host 'feed' broadcast
     if (data.logLine) {
       setTimeout(() => {
-        glog(data.logLine, data.logType || 'info');
-        if (data.quip) actionFeedPush(data.quip, data.quipColor || null, true);
+        glog(data.logLine, data.logType || 'warn');
       }, 2400);
     }
     return;
   }
-  if (data.type === 'quip') {
-    // Non-takeover action quip broadcast from host
-    actionFeedPush(data.text, data.color || null, data.isDanger || false);
+  if (data.type === 'feed') {
+    // Host-broadcast action feed entry — show on all clients
+    if (typeof actionFeedPush === 'function') {
+      actionFeedPush(data.text, data.color || null, data.isDanger || false);
+    }
     return;
   }
   if (data.type === 'lobby') {
@@ -500,6 +501,7 @@ function mpBeginGameAsHost(data) {
 }
 
 function mpClientBeginGame(data) {
+  MP.tutCheck = data.tutCheck ?? true; // store — used in mpApplyState first packet
   document.getElementById('lobby-overlay').classList.remove('show');
   document.getElementById('setup-overlay').style.display = 'none';
   setInfo('⏳ Waiting for host to send game state…');
@@ -606,92 +608,26 @@ function mpApplyState(gs) {
   const chatBtn = document.getElementById('chat-btn');
   if (chatBtn) { chatBtn.style.display = 'flex'; chatBtn.classList.add('mp-active'); }
 
-  // ── Action feed diff — only when we already had state (skip first packet) ──
-  if (hadPlayers && typeof actionFeedPush === 'function' && !GS.gameOver) {
-    const myId = MP.localSlot;
-
-    // Round boundary — show income summary using host-computed _roundRev
-    if (gs.round > prevRound && Object.keys(GS._roundRev).length) {
-      if (typeof showRoundSummary === 'function') showRoundSummary(GS._roundRev);
+  // ── First packet for client: start tutorial or phase announce ──
+  if (!hadPlayers && !MP.isHost) {
+    if (MP.tutCheck ?? true) {
+      startTutorial();
+    } else {
+      setTimeout(showPhaseAnnounce, 400);
     }
+  }
 
-    // Company ownership changes
-    GS.companies.forEach(newC => {
-      const oldC = prevCompanies.find(x => x.id === newC.id);
-      if (!oldC || newC.ownerId === oldC.ownerId) return;
-
-      const newOwner = GS.players.find(p => p.id === newC.ownerId);
-
-      if (newC.ownerId === null) return; // company released — no message needed
-
-      if (oldC.ownerId === null) {
-        // Acquired from unowned
-        if (newOwner && newOwner.id !== myId) {
-          actionFeedPush(`$ ${newOwner.name} acquired ${newC.name}`, newOwner.color, false);
-        }
-      } else if (oldC.ownerId === myId) {
-        // MY company was taken
-        const attacker = newOwner?.name || '?';
-        const color    = newOwner?.color || null;
-        actionFeedPush(`⚔ ${attacker} seized YOUR ${newC.name}!`, color, true);
-      } else {
-        // One opponent took from another
-        const fromPlayer = GS.players.find(p => p.id === oldC.ownerId);
-        const fromName   = fromPlayer?.name || '?';
-        if (newOwner && newOwner.id !== myId) {
-          actionFeedPush(`⚔ ${newOwner.name} captured ${newC.name} from ${fromName}`, newOwner.color, false);
-        }
-      }
-    });
-
-    // Upgrades
-    GS.companies.forEach(newC => {
-      const oldC = prevCompanies.find(x => x.id === newC.id);
-      if (!oldC || newC.upgrades <= oldC.upgrades) return;
-      if (newC.ownerId === null || newC.ownerId === myId) return;
-      const owner = GS.players.find(p => p.id === newC.ownerId);
-      if (!owner) return;
-      const lvUp = newC.level > oldC.level ? ` → Lv${newC.level}!` : '';
-      actionFeedPush(`⬆ ${owner.name} upgraded ${newC.name}${lvUp}`, owner.color, false);
-    });
-
-    // Stock purchases & sales
-    GS.players.forEach(newP => {
-      if (newP.id === myId) return;
-      const oldP = prevPlayers.find(x => x.id === newP.id);
-      if (!oldP) return;
-      Object.entries(newP.stocks || {}).forEach(([sid, qty]) => {
-        const prevQty = oldP.stocks[sid] || 0;
-        if (qty > prevQty) {
-          const sName = GS.sectors[sid]?.name || 'stock';
-          actionFeedPush(`📈 ${newP.name} bought ${sName} stock`, newP.color, false);
-        }
-      });
-    });
-
-    // Tactic card usage
-    GS.players.forEach(newP => {
-      if (newP.id === myId) return;
-      const oldP = prevPlayers.find(x => x.id === newP.id);
-      if (!oldP) return;
-      (newP.tactics || []).forEach((t, i) => {
-        const wasUsed = oldP.tactics[i]?.used || false;
-        if (t.used && !wasUsed) {
-          const danger = t.name === 'Espionage' || t.name === 'Hostile Press' || t.name === 'Market Correction';
-          actionFeedPush(`🃏 ${newP.name} played ${t.name}`, newP.color, danger);
-        }
-      });
-    });
+  // ── Round boundary: show CEO narrative then phase announce ──
+  if (hadPlayers && gs.round > prevRound) {
+    if (typeof showRoundSummary === 'function' && Object.keys(GS._roundRev || {}).length) {
+      showRoundSummary(GS._roundRev);
+    }
+    setTimeout(showPhaseAnnounce, 5300); // fires after summary fades (5s)
   }
 
   render();
   renderRoundTrack();
   updateTurnUI();
-
-  // Show phase announce when a new round starts
-  if (gs.round > prevRound && gs.round > 1) {
-    showPhaseAnnounce();
-  }
 
   // Show end-game overlay if game just ended (host set gameOver, client hasn't shown it yet)
   // Guard with a flag so we never fire endGame() twice on the same client
@@ -747,10 +683,7 @@ function mpExecuteRemoteAction(data, slotIdx) {
       if (c && c.ownerId === null && p.cash >= c.baseValue && !p._noAcquire) {
         p.cash -= c.baseValue; c.ownerId = slotIdx; p.actionsLeft--;
         const q = _pickQuip(ACQ_QUIPS);
-        glog(`${p.name} acquired ${c.name} — ${q}`, 'info');
-        const feedMsg = `${p.name} acquired ${c.name} — ${q}`;
-        if (slotIdx !== MP.localSlot) actionFeedPush(feedMsg, p.color, false);
-        mpHostBroadcast({ type:'quip', text:feedMsg, color:p.color, isDanger:false });
+        glog(`${p.name} acquired ${c.name} — ${q}`, 'good');
         updateRegionControl(); updateStockPrices();
       } else if (p._noAcquire) {
         glog(`${p.name}: Hostile Press — acquisition blocked!`, 'warn');
@@ -762,10 +695,7 @@ function mpExecuteRemoteAction(data, slotIdx) {
       if (c && c.ownerId === slotIdx && applyUpgrade(c)) {
         p.actionsLeft--;
         const q = _pickQuip(UPG_QUIPS);
-        glog(`${p.name} upgraded ${c.name} — ${q}`, 'info');
-        const feedMsg = `${p.name} upgraded ${c.name} — ${q}`;
-        if (slotIdx !== MP.localSlot) actionFeedPush(feedMsg, p.color, false);
-        mpHostBroadcast({ type:'quip', text:feedMsg, color:p.color, isDanger:false });
+        glog(`${p.name} upgraded ${c.name} → Lv${c.level} — ${q}`, 'good');
         updateStockPrices();
       }
       break;
@@ -780,9 +710,6 @@ function mpExecuteRemoteAction(data, slotIdx) {
         p.actionsLeft--;
         const q = _pickQuip(SELL_CO_QUIPS);
         glog(`${p.name} sold ${c.name} for $${sp} — ${q}`, 'warn');
-        const feedMsg = `${p.name} sold ${c.name} — ${q}`;
-        if (slotIdx !== MP.localSlot) actionFeedPush(feedMsg, p.color, false);
-        mpHostBroadcast({ type:'quip', text:feedMsg, color:p.color, isDanger:false });
         updateRegionControl(); updateStockPrices();
       }
       break;
@@ -806,14 +733,13 @@ function mpExecuteRemoteAction(data, slotIdx) {
           }
           updateRegionControl(); updateStockPrices();
 
-          // Build log line (no quip — quip goes to feed separately)
-          // Quip arrays are global from game-actions.js
+          // Build log line with quip embedded — glog handles feed + broadcast
           const quip = ok
             ? _pickQuip(TO_WIN_QUIPS(p, def))
             : _pickQuip(TO_FAIL_QUIPS(p, def));
           const logLine = ok
-            ? `🏆 Takeover SUCCESS — ${c.name} seized from ${def.name}.`
-            : `💀 Takeover FAILED — ${c.name} held by ${def.name}. Lost $${Math.floor(tk.cost*.5)}, $${tk.cost-Math.floor(tk.cost*.5)} refunded.`;
+            ? `🏆 ${p.name} seized ${c.name} from ${def.name} — ${quip}`
+            : `💀 ${p.name} failed to take ${c.name} — ${quip}`;
           const animPkt = {
             type: 'takeover_anim',
             effP: ep, roll,
@@ -823,21 +749,16 @@ function mpExecuteRemoteAction(data, slotIdx) {
             attackerSlot: slotIdx,
             ok,
             logLine,
-            logType: ok ? 'warn' : 'info',
-            quip,
-            quipColor: ok ? p.color : def.color,
+            logType: ok ? 'warn' : 'warn',
           };
           mpHostBroadcast(animPkt);
-          // Host always shows animation + logs + quip (same timing as clients)
+          // Host shows animation; glog fires at 2400ms to sync with animation end
           if (typeof _showDiceAnimation === 'function') {
             _showDiceAnimation(ep, c.name, p.name, def.name, null, roll);
           }
           setTimeout(() => {
-            glog(logLine, ok ? 'warn' : 'info');
-            // Only show on feed if host wasn't the attacker
-            if (slotIdx !== MP.localSlot) {
-              actionFeedPush(quip, ok ? p.color : def.color, true);
-            }
+            // glog auto-feeds on host + broadcasts 'feed' packet to all clients
+            glog(logLine, ok ? 'warn' : 'warn');
           }, 2400);
 
           // Delay state broadcast to let animation play before board updates
@@ -858,10 +779,7 @@ function mpExecuteRemoteAction(data, slotIdx) {
         p.cash -= cost; p.stocks[data.sid]=(p.stocks[data.sid]||0)+1;
         s.sharesLeft--; s.demand++; p.actionsLeft--;
         const q = _pickQuip(STOCK_BUY_QUIPS);
-        glog(`${p.name} bought ${s.name} @ $${cost} — ${q}`, 'info');
-        const feedMsg = `${p.name} bought ${s.name} — ${q}`;
-        if (slotIdx !== MP.localSlot) actionFeedPush(feedMsg, p.color, false);
-        mpHostBroadcast({ type:'quip', text:feedMsg, color:p.color, isDanger:false });
+        glog(`${p.name} bought ${s.name} @ $${cost} — ${q}`, 'good');
         updateStockPrices();
       }
       break;
@@ -872,10 +790,7 @@ function mpExecuteRemoteAction(data, slotIdx) {
         p.cash += s.price; p.stocks[data.sid]--;
         s.sharesLeft++; s.demand=Math.max(0,s.demand-1); p.actionsLeft--;
         const q = _pickQuip(STOCK_SELL_QUIPS);
-        glog(`${p.name} sold ${s.name} @ $${s.price} — ${q}`, 'info');
-        const feedMsg = `${p.name} sold ${s.name} stock — ${q}`;
-        if (slotIdx !== MP.localSlot) actionFeedPush(feedMsg, p.color, false);
-        mpHostBroadcast({ type:'quip', text:feedMsg, color:p.color, isDanger:false });
+        glog(`${p.name} sold ${s.name} @ $${s.price} — ${q}`, 'warn');
         updateStockPrices();
       }
       break;
