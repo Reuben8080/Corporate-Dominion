@@ -34,17 +34,17 @@ const CEO_TYPES = [
 ];
 const TACTICS_POOL = [
   { name:'Emergency Funding',  icon:'💰', effect:'+$60 cash injection',
-    action: p => { p.cash += 60; SFX.card(); glog(`${p.name}: Emergency Funding +$60`, 'good'); } },
+    action: p => { p.cash += 60; SFX.card(); glog(`${p.name}: Emergency Funding +$60 — "Found money in the couch cushions."`, 'good'); } },
   { name:'Espionage',          icon:'🕵', effect:'Steal $50 from the leader',
-    action: p => { const lead=GS.players.filter(x=>x.id!==p.id).sort((a,b)=>calcNW(b)-calcNW(a))[0]; if(!lead){SFX.nope();return;} const amt=Math.min(50,lead.cash); lead.cash-=amt; p.cash+=amt; SFX.card(); glog(`${p.name}: Espionage — stole $${amt} from ${lead.name}!`,'warn'); } },
+    action: p => { const lead=GS.players.filter(x=>x.id!==p.id).sort((a,b)=>calcNW(b)-calcNW(a))[0]; if(!lead){SFX.nope();return;} const amt=Math.min(50,lead.cash); lead.cash-=amt; p.cash+=amt; SFX.card(); glog(`${p.name}: Espionage — pilfered $${amt} from ${lead.name}. "Did you feel that?"`, 'warn'); } },
   { name:'Hostile Press',      icon:'📰', effect:'Leader loses $40 · frozen from acquiring next turn',
-    action: p => { const lead=GS.players.filter(x=>x.id!==p.id).sort((a,b)=>calcNW(b)-calcNW(a))[0]; if(!lead){SFX.nope();return;} const amt=Math.min(40,lead.cash); lead.cash-=amt; lead._noAcquire=true; SFX.card(); glog(`${p.name}: Hostile Press! ${lead.name} loses $${amt} & locked out of acquisitions!`,'warn'); } },
+    action: p => { const lead=GS.players.filter(x=>x.id!==p.id).sort((a,b)=>calcNW(b)-calcNW(a))[0]; if(!lead){SFX.nope();return;} const amt=Math.min(40,lead.cash); lead.cash-=amt; lead._noAcquire=true; SFX.card(); glog(`${p.name}: Hostile Press! ${lead.name} bleeds $${amt} & can't acquire next turn. "Front page news."`, 'warn'); } },
   { name:'Market Correction',  icon:'📉', effect:'ALL players (including you) lose 15% cash — use when trailing',
-    action: p => { GS.players.forEach(q => { const loss=Math.max(20,Math.floor(q.cash*0.15)); q.cash=Math.max(0,q.cash-loss); glog(`${q.name}: Market Correction −$${loss}`,'warn'); }); SFX.card(); render(); } },
+    action: p => { GS.players.forEach(q => { const loss=Math.max(20,Math.floor(q.cash*0.15)); q.cash=Math.max(0,q.cash-loss); glog(`${q.name}: Market Correction −$${loss}`,'warn'); }); SFX.card(); glog(`${p.name} triggered Market Correction. "Pain for all. Especially you."`, 'warn'); render(); } },
   { name:'Sovereign Bailout',  icon:'🏛', effect:'Recover your last failed takeover loss',
-    action: p => { const amt=p._lastTOFail||0; if(amt>0){ p.cash+=amt; p._lastTOFail=0; SFX.card(); glog(`${p.name}: Sovereign Bailout — recovered $${amt}!`,'good'); } else { p.cash+=30; SFX.card(); glog(`${p.name}: Sovereign Bailout — +$30 (no prior loss on record).`,'good'); } } },
+    action: p => { const amt=p._lastTOFail||0; if(amt>0){ p.cash+=amt; p._lastTOFail=0; SFX.card(); glog(`${p.name}: Sovereign Bailout — $${amt} clawed back. "Taxpayers will never know."`, 'good'); } else { p.cash+=30; SFX.card(); glog(`${p.name}: Sovereign Bailout — +$30 consolation. "The government always finds a way."`, 'good'); } } },
   { name:'Golden Parachute',   icon:'🪂', effect:'Sell your weakest company at 100% value',
-    action: p => { const c=GS.companies.filter(x=>x.ownerId===p.id).sort((a,b)=>calcCompanyValue(a)-calcCompanyValue(b))[0]; if(c){ const full=calcCompanyValue(c); p.cash+=full; c.ownerId=null; c.upgrades=0; c.level=1; c.revenue=c.initRevenue; c._traitDef=c.trait?3:0; updateRegionControl(); updateStockPrices(); render(); SFX.card(); glog(`${p.name}: Golden Parachute — sold ${c.name} at full value $${full}!`,'good'); } else { SFX.nope(); glog(`${p.name}: No company to sell.`,'info'); } } },
+    action: p => { const c=GS.companies.filter(x=>x.ownerId===p.id).sort((a,b)=>calcCompanyValue(a)-calcCompanyValue(b))[0]; if(c){ const full=calcCompanyValue(c); p.cash+=full; c.ownerId=null; c.upgrades=0; c.level=1; c.revenue=c.initRevenue; c._traitDef=c.trait?3:0; updateRegionControl(); updateStockPrices(); render(); SFX.card(); glog(`${p.name}: Golden Parachute — ${c.name} offloaded at full $${full}. "Never look back."`, 'good'); } else { SFX.nope(); glog(`${p.name}: No company to sell.`,'info'); } } },
 ];
 const GLOBAL_EVENTS = [
   { name:'TECH SURGE',    icon:'💻', effect:'Tech sector +5',                      apply: () => { const s=GS.sectors.find(x=>x.name==='Tech'); if(s) s.price=Math.min(25,s.price+5); } },
@@ -219,8 +219,7 @@ function startGame() {
   updateRegionControl();
   updateStockPrices();
   document.getElementById('setup-overlay').style.display = 'none';
-  const leaveBtns = document.querySelectorAll('.leave-sidebar-btn');
-  leaveBtns.forEach(b => b.style.display = 'flex');
+  document.body.classList.add('game-active');
   render();
   renderRoundTrack();
   if (document.getElementById('tut-check').checked) startTutorial();
