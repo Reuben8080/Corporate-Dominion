@@ -306,8 +306,8 @@ function showRoundSummary(revenueMap) {
   void inner.offsetWidth;
   inner.classList.add('visible');
 
-  // Hold for 5s — CEO narrative reads in ~4s, then phase announce fires
-  setTimeout(() => inner.classList.remove('visible'), 5000);
+  // Hold for 7s — enough to read narrative before phase announce fires
+  setTimeout(() => inner.classList.remove('visible'), 7000);
 }
 
 
