@@ -120,12 +120,39 @@ function toggleLeft() {
 }
 
 function glog(msg, type='info') {
+  /* ── DOM system log ── */
   const el = document.getElementById('log-area');
   const d  = document.createElement('div');
   d.className   = 'le ' + type;
   d.textContent = `[R${GS.round}] ${msg}`;
   el.insertBefore(d, el.firstChild);
   while (el.children.length > 120) el.removeChild(el.lastChild);
+
+  /* ── Action feed ticker ── */
+  // 'phase' and 'info' are system noise — skip feed for those
+  if (type === 'phase' || type === 'info') return;
+  if (typeof actionFeedPush !== 'function') return;
+
+  const colorMap = {
+    good:  'var(--green-lt)',
+    bad:   'var(--red-lt)',
+    warn:  'var(--amber)',
+    event: 'var(--purple)',
+  };
+  const feedColor = colorMap[type] || null;
+  const isDanger  = type === 'bad' || type === 'warn';
+
+  /* In solo OR when host in MP: push to local feed */
+  const isMPHost = typeof MP !== 'undefined' && MP.active && MP.isHost;
+  const isSolo   = typeof MP === 'undefined' || !MP.active;
+  if (isSolo || isMPHost) {
+    actionFeedPush(msg, feedColor, isDanger);
+  }
+
+  /* MP host: broadcast feed entry to all clients */
+  if (isMPHost && typeof mpHostBroadcast === 'function') {
+    mpHostBroadcast({ type: 'feed', text: msg, color: feedColor, isDanger });
+  }
 }
 
 /* ════════════════════════════════════════
@@ -279,8 +306,8 @@ function showRoundSummary(revenueMap) {
   void inner.offsetWidth;
   inner.classList.add('visible');
 
-  // Hold for 7s — enough to read narrative before phase announce fires
-  setTimeout(() => inner.classList.remove('visible'), 7000);
+  // Hold for 5s — CEO narrative reads in ~4s, then phase announce fires
+  setTimeout(() => inner.classList.remove('visible'), 5000);
 }
 
 
