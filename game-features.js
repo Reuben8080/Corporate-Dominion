@@ -126,29 +126,6 @@ function glog(msg, type='info') {
   d.textContent = `[R${GS.round}] ${msg}`;
   el.insertBefore(d, el.firstChild);
   while (el.children.length > 120) el.removeChild(el.lastChild);
-
-  // Push to action feed on mobile when it's not the human's turn
-  if (typeof actionFeedPush === 'function' &&
-      GS.players?.length &&
-      GS.currentPlayerIdx !== mySlot() &&
-      !GS.gameOver &&
-      type !== 'phase') {
-    // Derive player color from message — action messages always start with player name
-    let color = null;
-    const firstWord = msg.split(/[\s:—]/)[0];
-    const matchedP  = GS.players.find(p => p.name === firstWord);
-    if (matchedP) color = matchedP.color;
-
-    // Detect danger: opponent targeting one of your companies
-    const mySlotId = mySlot();
-    const myCompanyNames = GS.companies
-      .filter(c => c.ownerId === mySlotId)
-      .map(c => c.name);
-    const isDanger = (type === 'warn' || type === 'bad') &&
-      myCompanyNames.some(n => msg.includes(n));
-
-    actionFeedPush(msg, color, isDanger);
-  }
 }
 
 /* ════════════════════════════════════════
@@ -206,6 +183,17 @@ function _feedDismiss() {
    Shows income per player for 4s at end of round
    Called from endRound() before phase announce
 ════════════════════════════════════════ */
+const _SUMMARY_QUIPS = [
+  'Revenue doesn\'t lie. People do.',
+  'The market has spoken. Loudly.',
+  'Another round in the books. Adjust your projections.',
+  'Numbers on a screen — until they aren\'t.',
+  'Wealth is relative. So is failure.',
+  'Your shareholders are watching.',
+  'The gap widens. Or it doesn\'t. Either way, act accordingly.',
+  'This is fine.',
+];
+
 function showRoundSummary(revenueMap) {
   const card  = document.getElementById('round-summary');
   const inner = document.getElementById('round-summary-inner');
@@ -220,6 +208,8 @@ function showRoundSummary(revenueMap) {
     .map(p => ({ p, rev: revenueMap[p.id] || 0, nw: calcNW(p) }))
     .sort((a, b) => b.rev - a.rev);
 
+  const quip = _SUMMARY_QUIPS[Math.floor(Math.random() * _SUMMARY_QUIPS.length)];
+
   rows.innerHTML = sorted.map(({ p, rev, nw }) => `
     <div class="rsrow">
       <div class="rsrow-name" style="color:${p.color}">${p.name}</div>
@@ -227,16 +217,17 @@ function showRoundSummary(revenueMap) {
         <div class="rsrow-rev">+$${rev}</div>
         <div class="rsrow-nw">NW $${nw}</div>
       </div>
-    </div>`).join('');
+    </div>`).join('') +
+    `<div class="rsrow-quip">${quip}</div>`;
 
   inner.classList.remove('visible');
   void inner.offsetWidth;
   inner.classList.add('visible');
 
-  // Auto-dismiss after 4s
+  // Auto-dismiss after 5s
   setTimeout(() => {
     inner.classList.remove('visible');
-  }, 4000);
+  }, 5000);
 }
 
 
@@ -361,8 +352,8 @@ function renderTutStep() {
   const spot = document.getElementById('tut-spot');
   const card = document.getElementById('tut-card');
   const isMob = window.innerWidth <= 640;
-  // On mobile the fixed dock is ~170px tall; leave room above it
-  const dockH = isMob ? 176 : 0;
+  // Mobile dock is ~210px tall (actions-pill + dock buttons + end-turn + padding + safe-area)
+  const dockH = isMob ? 210 : 0;
 
   if (s.spotId) {
     const el = document.getElementById(s.spotId);
