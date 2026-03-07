@@ -1035,40 +1035,72 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
   bottom: 80px;
   left: 50%; transform: translateX(-50%);
   z-index: 215; pointer-events: none;
-  width: calc(100% - 32px); max-width: 340px;
+  width: calc(100% - 32px); max-width: 400px;
 }
 #round-summary-inner {
-  background: rgba(9,9,11,.96);
+  background: rgba(9,9,11,.97);
   border: 1px solid var(--border-l);
-  border-radius: 14px;
-  padding: 14px 18px;
-  box-shadow: 0 6px 28px rgba(0,0,0,.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  opacity: 0; transform: translateY(8px);
-  transition: opacity .28s ease, transform .28s ease;
+  border-radius: 16px;
+  padding: 16px 20px 18px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  opacity: 0; transform: translateY(10px);
+  transition: opacity .3s ease, transform .3s ease;
 }
 #round-summary-inner.visible {
   opacity: 1; transform: translateY(0);
 }
 #round-summary-title {
   font-family: var(--font-mono); font-size: 9px; font-weight: 700;
-  letter-spacing: .12em; text-transform: uppercase;
-  color: var(--tx-lo); margin-bottom: 8px;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--tx-lo); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+#round-summary-title::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
 }
 .rsrow {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 4px 0;
-  font-family: var(--font-mono); font-size: 12px;
+  display: flex; align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  gap: 8px;
 }
-.rsrow-name { font-weight: 700; }
-.rsrow-rev  { color: var(--green-lt); font-weight: 700; }
-.rsrow-nw   { color: var(--tx-lo); font-size: 10px; }
-.rsrow-quip {
+.rsrow:last-of-type { border-bottom: none; }
+.rsrow-rank {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--tx-lo); width: 16px; flex-shrink: 0; text-align: center;
+}
+.rsrow-name { font-family: var(--font-ui); font-weight: 700; font-size: 11px; flex: 1; }
+.rsrow-rev  {
+  font-family: var(--font-mono); font-weight: 800; font-size: 13px;
+  color: var(--green-lt);
+  background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.25);
+  border-radius: 6px; padding: 1px 7px;
+}
+.rsrow-nw   {
+  font-family: var(--font-mono); font-weight: 800; font-size: 13px;
+  color: var(--gold);
+  background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.25);
+  border-radius: 6px; padding: 1px 7px;
+}
+.rsrow-cash {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--tx-md);
+}
+.rsrow-narrative {
   font-family: var(--font-mono); font-size: 9px;
   color: var(--tx-lo); font-style: italic;
-  border-top: 1px solid var(--border); margin-top: 8px; padding-top: 7px;
-  letter-spacing: .02em; line-height: 1.5;
+  border-top: 1px solid var(--border); margin-top: 10px; padding-top: 10px;
+  line-height: 1.6; letter-spacing: .01em;
+}
+.rsrow-narrative-title {
+  font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--indigo-lt); margin-bottom: 4px;
+}
+.rsrow-narrative-text {
+  color: var(--tx-md); font-style: italic; font-size: 9px; line-height: 1.6;
 }
 
 
@@ -1349,7 +1381,8 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
   #board {
     display: grid !important;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
+    grid-auto-rows: auto;       /* each row is as tall as its content needs */
+    align-items: start;         /* cells don't stretch to match partner height */
     gap: 0;
     flex: 1;
     overflow-y: auto;
@@ -1419,7 +1452,12 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
   #center { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
   /* ── REGIONS ── */
-  .region-col { border-bottom: 1px solid var(--border); }
+  .region-col {
+    border-bottom: 1px solid var(--border);
+    overflow: visible;  /* allow cards to size naturally — no clipping */
+    min-height: 0;
+    height: auto;
+  }
   .region-col:nth-child(1), .region-col:nth-child(3) { border-right: 1px solid var(--border); }
   .region-col:nth-child(3), .region-col:nth-child(4) { border-bottom: none; }
 
