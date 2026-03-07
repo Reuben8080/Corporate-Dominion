@@ -387,10 +387,18 @@ function mpClientReceive(data) {
     if (typeof _showDiceAnimation === 'function') {
       _showDiceAnimation(data.effP, data.companyName, data.attackerName, data.defenderName, null, data.roll);
     }
-    // Write quip to log as overlay closes (~2.4s)
+    // Write log entry + push quip to feed as overlay closes (~2.4s)
     if (data.logLine) {
-      setTimeout(() => glog(data.logLine, data.logType || 'info'), 2400);
+      setTimeout(() => {
+        glog(data.logLine, data.logType || 'info');
+        if (data.quip) actionFeedPush(data.quip, data.quipColor || null, true);
+      }, 2400);
     }
+    return;
+  }
+  if (data.type === 'quip') {
+    // Non-takeover action quip broadcast from host
+    actionFeedPush(data.text, data.color || null, data.isDanger || false);
     return;
   }
   if (data.type === 'lobby') {
@@ -739,6 +747,9 @@ function mpExecuteRemoteAction(data, slotIdx) {
       if (c && c.ownerId === null && p.cash >= c.baseValue && !p._noAcquire) {
         p.cash -= c.baseValue; c.ownerId = slotIdx; p.actionsLeft--;
         glog(`${p.name} acquired ${c.name}`, 'info');
+        const q = _pickQuip(ACQ_QUIPS);
+        actionFeedPush(q, p.color, false);
+        mpHostBroadcast({ type:'quip', text:q, color:p.color, isDanger:false });
         updateRegionControl(); updateStockPrices();
       } else if (p._noAcquire) {
         glog(`${p.name}: Hostile Press — acquisition blocked!`, 'warn');
@@ -747,7 +758,14 @@ function mpExecuteRemoteAction(data, slotIdx) {
     }
     case 'upgrade': {
       const c = GS.companies.find(x => x.id === data.cid);
-      if (c && c.ownerId === slotIdx && applyUpgrade(c)) { p.actionsLeft--; updateStockPrices(); }
+      if (c && c.ownerId === slotIdx && applyUpgrade(c)) {
+        p.actionsLeft--;
+        glog(`${p.name} upgraded ${c.name}`, 'info');
+        const q = _pickQuip(UPG_QUIPS);
+        actionFeedPush(q, p.color, false);
+        mpHostBroadcast({ type:'quip', text:q, color:p.color, isDanger:false });
+        updateStockPrices();
+      }
       break;
     }
     case 'sell': {
@@ -759,6 +777,9 @@ function mpExecuteRemoteAction(data, slotIdx) {
         c._traitDef = c.trait ? 3 : 0;
         p.actionsLeft--;
         glog(`${p.name} sold ${c.name} for $${sp}`, 'warn');
+        const q = _pickQuip(SELL_CO_QUIPS);
+        actionFeedPush(q, p.color, false);
+        mpHostBroadcast({ type:'quip', text:q, color:p.color, isDanger:false });
         updateRegionControl(); updateStockPrices();
       }
       break;
@@ -774,24 +795,6 @@ function mpExecuteRemoteAction(data, slotIdx) {
           const ep  = Math.max(0.05, tk.P - fp);
           const roll = Math.random();
           const ok   = roll <= ep;
-          const def2 = def; // alias for quip closures
-          const _toWinQ = [
-            `${def2.name} didn't see that coming. Nobody did.`,
-            `The keys have changed hands. ${def2.name} is advised not to make eye contact.`,
-            `Hostile? ${p.name} prefers the term 'enthusiastic acquisition.'`,
-            `${def2.name} had it for all of five minutes. Touching.`,
-            `The board voted unanimously. ${def2.name} wasn't on the board.`,
-            `Money talked. ${def2.name} did not talk back fast enough.`,
-            `A masterclass in corporate aggression. ${def2.name} will remember this.`,
-          ];
-          const _toFailQ = [
-            `${def2.name} held firm. ${p.name} held a receipt.`,
-            `${def2.name} laughs all the way to their own bank.`,
-            `Expensive lesson. ${p.name} has learned nothing.`,
-            `Bold strategy. Bolder failure.`,
-            `The market has judged ${p.name}. The verdict: embarrassing.`,
-            `${def2.name} repels the attack. Barely even notices, honestly.`,
-          ];
           if (ok) { c.ownerId = slotIdx; GS.stats.tos[slotIdx]++; }
           else {
             const ret=Math.floor(tk.cost*.5); const lost=tk.cost-ret;
@@ -800,12 +803,14 @@ function mpExecuteRemoteAction(data, slotIdx) {
           }
           updateRegionControl(); updateStockPrices();
 
-          // Build a single log line with quip — broadcast in the anim packet so ALL
-          // four players (host, attacker, defender, spectator) write it to their own log
-          // at the same moment the animation overlay closes (~2.4s).
+          // Build log line (no quip — quip goes to feed separately)
+          // Quip arrays are global from game-actions.js
+          const quip = ok
+            ? _pickQuip(TO_WIN_QUIPS(p, def))
+            : _pickQuip(TO_FAIL_QUIPS(p, def));
           const logLine = ok
-            ? `${p.name} ⚔ captured ${c.name}. ${_toWinQ[Math.floor(Math.random()*_toWinQ.length)]}`
-            : `${p.name} takeover failed: ${c.name}. ${_toFailQ[Math.floor(Math.random()*_toFailQ.length)]}`;
+            ? `🏆 Takeover SUCCESS — ${c.name} seized from ${def.name}.`
+            : `💀 Takeover FAILED — ${c.name} held by ${def.name}. Lost $${Math.floor(tk.cost*.5)}, $${tk.cost-Math.floor(tk.cost*.5)} refunded.`;
           const animPkt = {
             type: 'takeover_anim',
             effP: ep, roll,
@@ -814,16 +819,20 @@ function mpExecuteRemoteAction(data, slotIdx) {
             defenderName: def.name,
             attackerSlot: slotIdx,
             ok,
-            logLine,      // clients glog this so everyone sees the quip
+            logLine,
             logType: ok ? 'warn' : 'info',
+            quip,
+            quipColor: ok ? p.color : def.color,
           };
           mpHostBroadcast(animPkt);
-          // Host always shows animation (for their own turn or as spectator/defender)
+          // Host always shows animation + logs + quip (same timing as clients)
           if (typeof _showDiceAnimation === 'function') {
             _showDiceAnimation(ep, c.name, p.name, def.name, null, roll);
           }
-          // Host writes quip to log as overlay closes, same timing as clients
-          setTimeout(() => glog(logLine, ok ? 'warn' : 'info'), 2400);
+          setTimeout(() => {
+            glog(logLine, ok ? 'warn' : 'info');
+            actionFeedPush(quip, ok ? p.color : def.color, true);
+          }, 2400);
 
           // Delay state broadcast to let animation play before board updates
           GS.currentPlayerIdx = prevIdx; render();
@@ -843,6 +852,9 @@ function mpExecuteRemoteAction(data, slotIdx) {
         p.cash -= cost; p.stocks[data.sid]=(p.stocks[data.sid]||0)+1;
         s.sharesLeft--; s.demand++; p.actionsLeft--;
         glog(`${p.name} bought ${s.name} @ $${cost}`, 'info');
+        const q = _pickQuip(STOCK_BUY_QUIPS);
+        actionFeedPush(q, p.color, false);
+        mpHostBroadcast({ type:'quip', text:q, color:p.color, isDanger:false });
         updateStockPrices();
       }
       break;
@@ -853,6 +865,9 @@ function mpExecuteRemoteAction(data, slotIdx) {
         p.cash += s.price; p.stocks[data.sid]--;
         s.sharesLeft++; s.demand=Math.max(0,s.demand-1); p.actionsLeft--;
         glog(`${p.name} sold ${s.name} @ $${s.price}`, 'info');
+        const q = _pickQuip(STOCK_SELL_QUIPS);
+        actionFeedPush(q, p.color, false);
+        mpHostBroadcast({ type:'quip', text:q, color:p.color, isDanger:false });
         updateStockPrices();
       }
       break;
