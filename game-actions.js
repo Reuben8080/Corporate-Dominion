@@ -255,7 +255,8 @@ function doAcquire(cid) {
   }
   p.cash -= c.baseValue; c.ownerId = slot; p.actionsLeft--;
   SFX.acquire();
-  glog(`${p.name} acquired ${c.name} ($${c.baseValue})`, 'good');
+  const _acqQuips = ['Another one for the empire.','Signed, sealed, delivered.','The board approves.','Expansion is non-negotiable.','Mine now.','Checkbook closed.'];
+  glog(`${p.name} acquired ${c.name} ($${c.baseValue}) — ${_acqQuips[Math.floor(Math.random()*_acqQuips.length)]}`, 'good');
   updateRegionControl(); updateStockPrices(); render(); clearAction();
 }
 
@@ -267,7 +268,8 @@ function doUpgrade(cid) {
   if (!applyUpgrade(c)) { glog('Insufficient funds for upgrade.', 'bad'); return; }
   p.actionsLeft--;
   SFX.upgrade();
-  glog(`${p.name} upgraded ${c.name} → Lv${c.level} (+${c.upgrades} upgrades)`, 'good');
+  const _upgQuips = ['Level up.','Bigger, better, bolder.','Infrastructure investment pays off.','Compound growth engaged.','The empire expands.','Efficiency maximised.'];
+  glog(`${p.name} upgraded ${c.name} → Lv${c.level} — ${_upgQuips[Math.floor(Math.random()*_upgQuips.length)]}`, 'good');
   updateStockPrices(); render(); clearAction();
 }
 
@@ -283,7 +285,8 @@ function doSell(cid) {
   c.revenue  = c.initRevenue;
   c._traitDef = c.trait ? 3 : 0;
   SFX.sellco();
-  glog(`${p.name} sold ${c.name} for $${sp}`, 'warn');
+  const _coSellQuips = ['Strategic retreat.','Portfolio pruned.','Sometimes you cut the dead weight.','Liquidated. No regrets.','Capital recycled.'];
+  glog(`${p.name} sold ${c.name} for $${sp} — ${_coSellQuips[Math.floor(Math.random()*_coSellQuips.length)]}`, 'warn');
   updateRegionControl(); updateStockPrices(); render(); clearAction();
 }
 
@@ -316,7 +319,7 @@ function runDiceDisplay(effP, companyName, attackerName, defenderName) {
 }
 
 /* ── Core animation used by both ── */
-function _showDiceAnimation(effP, companyName, attackerName, defenderName, onDone) {
+function _showDiceAnimation(effP, companyName, attackerName, defenderName, onDone, forcedRoll) {
   const ov = document.getElementById('dice-overlay');
 
   const pct = Math.round(effP * 100);
@@ -343,7 +346,8 @@ function _showDiceAnimation(effP, companyName, attackerName, defenderName, onDon
   requestAnimationFrame(() => {
     ov.classList.add('show');
 
-    const finalRoll = Math.random();
+    // Use forcedRoll from host if provided (MP), otherwise generate locally (solo)
+    const finalRoll = (typeof forcedRoll === 'number') ? forcedRoll : Math.random();
     const ok = finalRoll <= effP;
     let ticks = 0;
 
@@ -373,18 +377,40 @@ function _showDiceAnimation(effP, companyName, attackerName, defenderName, onDon
 }
 
 function resolveTakeover(ok, c, def, cost, p, roll, effP) {
+  const _toWinQuips = [
+    `${def.name} didn't see that coming. Nobody did.`,
+    `The keys have changed hands. ${def.name} is advised not to make eye contact.`,
+    `${def.name}'s lawyers are already drafting something. It won't help.`,
+    `Hostile? ${p.name} prefers the term 'enthusiastic acquisition.'`,
+    `${def.name} had it for all of five minutes. Touching.`,
+    `The board voted unanimously. ${def.name} wasn't on the board.`,
+    `Money talked. ${def.name} did not talk back fast enough.`,
+    `A masterclass in corporate aggression. ${def.name} will remember this.`,
+  ];
+  const _toFailQuips = [
+    `${def.name} held firm. ${p.name} held a receipt.`,
+    `The dice have spoken. ${p.name} wishes they hadn't.`,
+    `${def.name} laughs all the way to their own bank.`,
+    `Expensive lesson. ${p.name} has learned nothing.`,
+    `${c.name} remains in ${def.name}'s hands. As it was. As it will be.`,
+    `Bold strategy. Bolder failure.`,
+    `The market has judged ${p.name}. The verdict: embarrassing.`,
+    `${def.name} repels the attack. Barely even notices, honestly.`,
+  ];
   if (ok) {
     c.ownerId = p.id;
     GS.stats.tos[p.id]++;
-    glog(`🏆 Takeover SUCCESS — ${c.name} seized from ${def.name}`, 'good');
+    const q = _toWinQuips[Math.floor(Math.random() * _toWinQuips.length)];
+    glog(`🏆 Takeover SUCCESS — ${c.name} seized from ${def.name}. ${q}`, 'good');
   } else {
     const lost = Math.floor(cost * 0.5);
     const ret  = cost - lost;
     p._lastTOFail = lost;
-    p.cash += ret; // Immediate refund — consistent with AI, prevents false bankruptcy at round end
+    p.cash += ret;
     c.failedTakeoversAgainst++;
     GS._marketInstability = Math.min(3, (GS._marketInstability || 0) + 1);
-    glog(`💀 Takeover FAILED — ${c.name} held by ${def.name}. Lost $${lost}, $${ret} refunded.`, 'bad');
+    const q = _toFailQuips[Math.floor(Math.random() * _toFailQuips.length)];
+    glog(`💀 Takeover FAILED — ${c.name} held by ${def.name}. Lost $${lost}, $${ret} refunded. ${q}`, 'bad');
   }
   updateRegionControl(); updateStockPrices(); render();
 }
@@ -402,7 +428,8 @@ function doStockBuy(sid) {
   s.sharesLeft--; s.demand++;
   p.actionsLeft--;
   SFX.buy();
-  glog(`${p.name} bought ${s.name} stock @ $${cost}  (earns ~$${Math.round(s.price / 5)}/round, varies with market)`, 'good');
+  const _buyQuips = ['Riding the wave.','Money on the table.','Diversify or die.','Smart money moves.','The market never sleeps.','Let it ride.','Bold play.','Compound interest smiles.'];
+  glog(`${p.name} bought ${s.name} stock @ $${cost} — ${_buyQuips[Math.floor(Math.random()*_buyQuips.length)]}`, 'good');
   updateStockPrices(); render(); renderRightSidebar();
   // Refresh modal if still open, otherwise clearAction handles auto-end
   if (p.actionsLeft > 0) { closeModal(); showStocksModal(); }
@@ -420,7 +447,8 @@ function doStockSell(sid) {
   s.sharesLeft++; s.demand = Math.max(0, s.demand - 1);
   p.actionsLeft--;
   SFX.sell();
-  glog(`${p.name} sold ${s.name} @ $${s.price}`, 'warn');
+  const _sellQuips = ['Taking profits.','Get out while you can.','Cash is king.','Cutting losses, moving on.','Timing is everything.','Liquidating positions.'];
+  glog(`${p.name} sold ${s.name} @ $${s.price} — ${_sellQuips[Math.floor(Math.random()*_sellQuips.length)]}`, 'warn');
   updateStockPrices(); render(); renderRightSidebar();
   if (p.actionsLeft > 0) { closeModal(); showStocksModal(); }
   else { closeModal(); clearAction(); }
