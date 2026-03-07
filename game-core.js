@@ -494,11 +494,15 @@ function aiDecide(pid) {
   /* ── Execute best decision ── */
   if (best.type === 'acquire') {
     p.cash -= best.t.baseValue; best.t.ownerId = pid;
-    SFX.aiact(); glog(`${p.name} acquired ${best.t.name} ($${best.t.baseValue})`, 'info');
+    const q = _pickQuip(ACQ_QUIPS);
+    SFX.aiact(); glog(`${p.name} acquired ${best.t.name} ($${best.t.baseValue}) — ${q}`, 'info');
+    actionFeedPush(`${p.name} acquired ${best.t.name} — ${q}`, p.color, false);
   }
   else if (best.type === 'upgrade') {
     applyUpgrade(best.t); SFX.aiact();
-    glog(`${p.name} upgraded ${best.t.name}`, 'info');
+    const q = _pickQuip(UPG_QUIPS);
+    glog(`${p.name} upgraded ${best.t.name} — ${q}`, 'info');
+    actionFeedPush(`${p.name} upgraded ${best.t.name} — ${q}`, p.color, false);
   }
   else if (best.type === 'takeover') {
     const { c, tk } = best; const def = GS.players[c.ownerId];
@@ -509,22 +513,29 @@ function aiDecide(pid) {
     p.cash -= tk.cost; GS.stats.toa[pid]++;
     if (roll <= ep) {
       c.ownerId = pid; GS.stats.tos[pid]++;
-      SFX.aiact(); glog(`${p.name} ⚔ captured ${c.name}  [${Math.round(ep * 100)}%]`, 'warn');
+      const q = _pickQuip(TO_WIN_QUIPS(p, def));
+      SFX.aiact(); glog(`${p.name} ⚔ captured ${c.name}  [${Math.round(ep * 100)}%] — ${q}`, 'warn');
+      const isDanger = c.ownerId === 0; // was the human's company
+      actionFeedPush(`${p.name} seized ${c.name} — ${q}`, p.color, isDanger);
     } else {
       const ret  = Math.floor(tk.cost * 0.5);
       const lost = tk.cost - ret;
       p._lastTOFail = lost;
-      p.cash += ret; // Return immediately — no setTimeout (fires at wrong time)
+      p.cash += ret;
       c.failedTakeoversAgainst++;
       GS._marketInstability = Math.min(3, GS._marketInstability + 1);
-      glog(`${p.name} takeover failed: ${c.name} — $${ret} returned`, 'info');
+      const q = _pickQuip(TO_FAIL_QUIPS(p, def));
+      glog(`${p.name} takeover failed: ${c.name} — $${ret} returned. ${q}`, 'info');
+      actionFeedPush(`${p.name} failed to take ${c.name} — ${q}`, def.color || p.color, false);
     }
   }
   else if (best.type === 'invest') {
     const s = best.s;
     p.cash -= s.price; p.stocks[s.id] = (p.stocks[s.id] || 0) + 1;
     s.sharesLeft--; s.demand++;
-    SFX.aiact(); glog(`${p.name} bought ${s.name} stock`, 'info');
+    const q = _pickQuip(STOCK_BUY_QUIPS);
+    SFX.aiact(); glog(`${p.name} bought ${s.name} stock — ${q}`, 'info');
+    actionFeedPush(`${p.name} bought ${s.name} stock — ${q}`, p.color, false);
   }
 
   updateRegionControl(); updateStockPrices(); render();
@@ -583,9 +594,9 @@ function endRound() {
 
   glog(`=== ROUND ${GS.round}  ·  ${GS.phase.name} ===`, 'phase');
   render(); updateTurnUI(); renderRoundTrack();
-  // Show round income summary on mobile, then phase announce after it fades
+  // Show round income summary (7s), then phase announce after it fades
   if (typeof showRoundSummary === 'function') showRoundSummary(_roundRevMap);
-  setTimeout(showPhaseAnnounce, 800);
+  setTimeout(showPhaseAnnounce, 7300);
 }
 
 /* ══════════════════════════════════════════════════════
