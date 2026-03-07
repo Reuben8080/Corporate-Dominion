@@ -326,7 +326,7 @@ function showPhaseAnnounce() {
   const fill = document.getElementById('pa-pfill');
   fill.style.background = ph.color; fill.style.transition='none'; fill.style.width='0%';
   requestAnimationFrame(() => { fill.style.transition='width 4s linear'; fill.style.width='100%'; });
-  _phaseTimer = setTimeout(dismissPhase, 5000);
+  _phaseTimer = setTimeout(dismissPhase, 3000);
 }
 function dismissPhase() {
   clearTimeout(_phaseTimer);
