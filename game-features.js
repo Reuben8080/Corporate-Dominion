@@ -183,15 +183,52 @@ function _feedDismiss() {
    Shows income per player for 4s at end of round
    Called from endRound() before phase announce
 ════════════════════════════════════════ */
-const _SUMMARY_QUIPS = [
-  'Revenue doesn\'t lie. People do.',
-  'The market has spoken. Loudly.',
-  'Another round in the books. Adjust your projections.',
-  'Numbers on a screen — until they aren\'t.',
-  'Wealth is relative. So is failure.',
-  'Your shareholders are watching.',
-  'The gap widens. Or it doesn\'t. Either way, act accordingly.',
-  'This is fine.',
+/* ════════════════════════════════════════
+   ROUND NARRATIVES — personalized story per rank per round
+════════════════════════════════════════ */
+const ROUND_NARRATIVES = [
+  // Round 1: The Ribbon Cutting
+  [
+    { title: 'The Prodigy',   text: "The press is calling you a 'Natural.' Your flagship office has a fountain in the lobby and the city's elite are begging for an invite to the opening." },
+    { title: 'The Competitor',text: "You've secured a solid mid-town office. It's respectable, professional, and within walking distance of the bank. You're on the radar." },
+    { title: 'The Struggler', text: "Your 'office' is currently a cubicle in a shared space. You're paying for your own coffee and the Wi-Fi password changes every hour. It's a start." },
+    { title: 'The Basement',  text: "You're operating out of your garage. The neighbors are complaining about the noise, and your 'desk' is a door balanced on two stacks of boxes." },
+  ],
+  // Round 2: The Dividend Gala
+  [
+    { title: 'The Host',      text: "You hosted a charity gala this weekend. You didn't care about the cause, but you looked fantastic in a tuxedo. Everyone who is anyone was there." },
+    { title: 'The Guest',     text: "You were invited to the gala. You spent the night networking by the buffet, making sure the right people saw your business card." },
+    { title: 'The Crasher',   text: "You weren't invited, so you 'bumped into' a Senator at the dry cleaners instead. You're hustle-heavy, but the doors aren't opening yet." },
+    { title: 'The Outsider',  text: "You spent the weekend at a dive bar, sketching your next move on a damp napkin. The bartender thinks you're crazy; you know you're just warming up." },
+  ],
+  // Round 3: The Mid-Point Turbulence
+  [
+    { title: 'The Target',    text: "Your phone won't stop ringing. Everyone wants a piece of you, but you've started wearing sunglasses indoors to avoid the 'little people.'" },
+    { title: 'The Challenger',text: "You've just hired a top-tier PR firm. You're closing the gap, and the magazines are starting to ask if the leader is losing their edge." },
+    { title: 'The Survivor',  text: "You just survived a minor scandal. It was stressful, but it gave you a thick skin. You're officially 'battle-tested' now." },
+    { title: 'The Scrappy',   text: "Your lead engineer just quit for a 'better offer.' You're doing three people's jobs at once, fueled entirely by spite and cheap espresso." },
+  ],
+  // Round 4: The Pivot or The Peak
+  [
+    { title: 'The Titan',     text: "You're considering buying a sports team just to see if you can make them win. The view from the penthouse is lonely, but the air is very expensive." },
+    { title: 'The Specialist',text: "You've specialized your portfolio. You aren't the biggest yet, but you are the most efficient. You're the one everyone is actually afraid of." },
+    { title: 'The Pivot',     text: "You've realized your old strategy wasn't working. You've fired half your staff and sold the fancy art. It's time for a lean, mean comeback." },
+    { title: 'The Underdog',  text: "The news calls you a 'Short-seller's Dream.' They think you're going under. You're using that anonymity to move in the shadows while they aren't looking." },
+  ],
+  // Round 5: The Global Empire
+  [
+    { title: 'The Systemic',  text: "You are now a 'Systemic Entity.' If you fall, the whole market shakes. You spend your mornings deciding which small country's GDP you'd like to exceed." },
+    { title: 'The Prince',    text: "You're the 'Crown Prince' of the market. You're waiting for the leader to make one tiny mistake so you can seize the throne." },
+    { title: 'The Resilient', text: "You've climbed back from the brink. You aren't the wealthiest, but you are the most respected for your sheer refusal to go bankrupt." },
+    { title: 'The Disruptor', text: "You've become the 'Scrappy Disruptor.' The leaders are looking over their shoulders because they see you in the rearview mirror. You have nothing left to lose." },
+  ],
+  // Round 6: The Exit Strategy
+  [
+    { title: 'The Legend',    text: "Your name is on the building and the university library. You didn't just play the game; you redefined it. You retire to your own private island." },
+    { title: 'The Power',     text: "You are a titan in your own right. You might not own the world, but you certainly have a permanent seat at the table where it's run." },
+    { title: 'The Executive', text: "You've built a solid, lasting legacy. You're the 'Old Money' now — stable, respected, and comfortably wealthy for generations." },
+    { title: 'The Lesson',    text: "You lost the fortune, but you gained the 'Experience.' You're already writing a book about your 'Spectacular Failure' — it'll probably be a bestseller." },
+  ],
 ];
 
 function showRoundSummary(revenueMap) {
@@ -201,33 +238,49 @@ function showRoundSummary(revenueMap) {
   const title = document.getElementById('round-summary-title');
   if (!card || !inner || !rows) return;
 
-  title.textContent = `📊 ROUND ${GS.round} INCOME`;
+  // Round that just completed (GS.round increments AFTER this call in endRound)
+  const roundIdx = Math.min(GS.round - 1, 5); // 0-based index, capped at 5
+  const roundNames = ['The Ribbon Cutting','The Dividend Gala','The Mid-Point Turbulence',
+                      'The Pivot or the Peak','The Global Empire','The Exit Strategy'];
+  title.textContent = `R${GS.round} · ${roundNames[roundIdx] || 'Income Summary'}`;
 
-  // Sort by revenue descending
+  // Sort by NW descending to determine rank
   const sorted = GS.players
     .map(p => ({ p, rev: revenueMap[p.id] || 0, nw: calcNW(p) }))
-    .sort((a, b) => b.rev - a.rev);
+    .sort((a, b) => b.nw - a.nw);
 
-  const quip = _SUMMARY_QUIPS[Math.floor(Math.random() * _SUMMARY_QUIPS.length)];
+  const narratives = ROUND_NARRATIVES[roundIdx] || [];
+  const mySlotId   = mySlot();
 
-  rows.innerHTML = sorted.map(({ p, rev, nw }) => `
+  // Build rows — all players
+  rows.innerHTML = sorted.map(({ p, rev, nw }, rankIdx) => `
     <div class="rsrow">
+      <div class="rsrow-rank">${rankIdx + 1}</div>
       <div class="rsrow-name" style="color:${p.color}">${p.name}</div>
-      <div style="display:flex;gap:10px;align-items:baseline">
-        <div class="rsrow-rev">+$${rev}</div>
-        <div class="rsrow-nw">NW $${nw}</div>
-      </div>
-    </div>`).join('') +
-    `<div class="rsrow-quip">${quip}</div>`;
+      <div class="rsrow-rev">+$${rev}</div>
+      <div class="rsrow-nw">$${nw}</div>
+      <div class="rsrow-cash" style="color:var(--tx-lo)">💵$${p.cash}</div>
+    </div>`).join('');
+
+  // Find the human player's rank for their personal narrative
+  const humanRankIdx = sorted.findIndex(({ p }) => p.id === mySlotId);
+  const narrative    = narratives[Math.min(humanRankIdx, narratives.length - 1)];
+  const humanPlayer  = sorted[humanRankIdx]?.p;
+
+  if (narrative && humanPlayer) {
+    rows.innerHTML += `
+      <div class="rsrow-narrative">
+        <div class="rsrow-narrative-title" style="color:${humanPlayer.color}">${narrative.title}</div>
+        <div class="rsrow-narrative-text">"${narrative.text}"</div>
+      </div>`;
+  }
 
   inner.classList.remove('visible');
   void inner.offsetWidth;
   inner.classList.add('visible');
 
-  // Auto-dismiss after 5s
-  setTimeout(() => {
-    inner.classList.remove('visible');
-  }, 5000);
+  // Hold for 7s — enough to read narrative before phase announce fires
+  setTimeout(() => inner.classList.remove('visible'), 7000);
 }
 
 
