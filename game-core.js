@@ -590,7 +590,7 @@ function endRound() {
   render(); updateTurnUI(); renderRoundTrack();
   // Show round income summary (7s), then phase announce after it fades
   if (typeof showRoundSummary === 'function') showRoundSummary(_roundRevMap);
-  setTimeout(showPhaseAnnounce, 5300); // fires just after summary fades (5s)
+  setTimeout(showPhaseAnnounce, 7300); // fires just after 7s summary fades
 }
 
 /* ══════════════════════════════════════════════════════
