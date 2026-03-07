@@ -242,6 +242,33 @@ function handleCompanyClick(cid) {
   }
 }
 
+/* ── Quip pools (global so game-mp.js can reference them for MP broadcasts) ── */
+const ACQ_QUIPS      = ['Another one for the empire.','Signed, sealed, delivered.','The board approves.','Expansion is non-negotiable.','Mine now.','Checkbook closed.'];
+const UPG_QUIPS      = ['Level up.','Bigger, better, bolder.','Infrastructure investment pays off.','Compound growth engaged.','The empire expands.','Efficiency maximised.'];
+const SELL_CO_QUIPS  = ['Strategic retreat.','Portfolio pruned.','Sometimes you cut the dead weight.','Liquidated. No regrets.','Capital recycled.'];
+const STOCK_BUY_QUIPS  = ['Riding the wave.','Money on the table.','Diversify or die.','Smart money moves.','The market never sleeps.','Let it ride.','Bold play.','Compound interest smiles.'];
+const STOCK_SELL_QUIPS = ['Taking profits.','Get out while you can.','Cash is king.','Cutting losses, moving on.','Timing is everything.','Liquidating positions.'];
+const TO_WIN_QUIPS = (p, def) => [
+  `${def.name} didn't see that coming. Nobody did.`,
+  `The keys have changed hands. ${def.name} is advised not to make eye contact.`,
+  `${def.name}'s lawyers are already drafting something. It won't help.`,
+  `Hostile? ${p.name} prefers the term 'enthusiastic acquisition.'`,
+  `${def.name} had it for all of five minutes. Touching.`,
+  `The board voted unanimously. ${def.name} wasn't on the board.`,
+  `Money talked. ${def.name} did not talk back fast enough.`,
+  `A masterclass in corporate aggression. ${def.name} will remember this.`,
+];
+const TO_FAIL_QUIPS = (p, def) => [
+  `${def.name} held firm. ${p.name} held a receipt.`,
+  `The dice have spoken. ${p.name} wishes they hadn't.`,
+  `${def.name} laughs all the way to their own bank.`,
+  `Expensive lesson. ${p.name} has learned nothing.`,
+  `Bold strategy. Bolder failure.`,
+  `The market has judged ${p.name}. The verdict: embarrassing.`,
+  `${def.name} repels the attack. Barely even notices, honestly.`,
+];
+function _pickQuip(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
 /* ── Action executors ── */
 function doAcquire(cid) {
   closeModal();
@@ -255,8 +282,8 @@ function doAcquire(cid) {
   }
   p.cash -= c.baseValue; c.ownerId = slot; p.actionsLeft--;
   SFX.acquire();
-  const _acqQuips = ['Another one for the empire.','Signed, sealed, delivered.','The board approves.','Expansion is non-negotiable.','Mine now.','Checkbook closed.'];
-  glog(`${p.name} acquired ${c.name} ($${c.baseValue}) — ${_acqQuips[Math.floor(Math.random()*_acqQuips.length)]}`, 'good');
+  glog(`${p.name} acquired ${c.name} ($${c.baseValue})`, 'good');
+  actionFeedPush(_pickQuip(ACQ_QUIPS), p.color, false);
   updateRegionControl(); updateStockPrices(); render(); clearAction();
 }
 
@@ -268,8 +295,8 @@ function doUpgrade(cid) {
   if (!applyUpgrade(c)) { glog('Insufficient funds for upgrade.', 'bad'); return; }
   p.actionsLeft--;
   SFX.upgrade();
-  const _upgQuips = ['Level up.','Bigger, better, bolder.','Infrastructure investment pays off.','Compound growth engaged.','The empire expands.','Efficiency maximised.'];
-  glog(`${p.name} upgraded ${c.name} → Lv${c.level} — ${_upgQuips[Math.floor(Math.random()*_upgQuips.length)]}`, 'good');
+  glog(`${p.name} upgraded ${c.name} → Lv${c.level}`, 'good');
+  actionFeedPush(_pickQuip(UPG_QUIPS), p.color, false);
   updateStockPrices(); render(); clearAction();
 }
 
@@ -285,8 +312,8 @@ function doSell(cid) {
   c.revenue  = c.initRevenue;
   c._traitDef = c.trait ? 3 : 0;
   SFX.sellco();
-  const _coSellQuips = ['Strategic retreat.','Portfolio pruned.','Sometimes you cut the dead weight.','Liquidated. No regrets.','Capital recycled.'];
-  glog(`${p.name} sold ${c.name} for $${sp} — ${_coSellQuips[Math.floor(Math.random()*_coSellQuips.length)]}`, 'warn');
+  glog(`${p.name} sold ${c.name} for $${sp}`, 'warn');
+  actionFeedPush(_pickQuip(SELL_CO_QUIPS), p.color, false);
   updateRegionControl(); updateStockPrices(); render(); clearAction();
 }
 
@@ -377,31 +404,12 @@ function _showDiceAnimation(effP, companyName, attackerName, defenderName, onDon
 }
 
 function resolveTakeover(ok, c, def, cost, p, roll, effP) {
-  const _toWinQuips = [
-    `${def.name} didn't see that coming. Nobody did.`,
-    `The keys have changed hands. ${def.name} is advised not to make eye contact.`,
-    `${def.name}'s lawyers are already drafting something. It won't help.`,
-    `Hostile? ${p.name} prefers the term 'enthusiastic acquisition.'`,
-    `${def.name} had it for all of five minutes. Touching.`,
-    `The board voted unanimously. ${def.name} wasn't on the board.`,
-    `Money talked. ${def.name} did not talk back fast enough.`,
-    `A masterclass in corporate aggression. ${def.name} will remember this.`,
-  ];
-  const _toFailQuips = [
-    `${def.name} held firm. ${p.name} held a receipt.`,
-    `The dice have spoken. ${p.name} wishes they hadn't.`,
-    `${def.name} laughs all the way to their own bank.`,
-    `Expensive lesson. ${p.name} has learned nothing.`,
-    `${c.name} remains in ${def.name}'s hands. As it was. As it will be.`,
-    `Bold strategy. Bolder failure.`,
-    `The market has judged ${p.name}. The verdict: embarrassing.`,
-    `${def.name} repels the attack. Barely even notices, honestly.`,
-  ];
   if (ok) {
     c.ownerId = p.id;
     GS.stats.tos[p.id]++;
-    const q = _toWinQuips[Math.floor(Math.random() * _toWinQuips.length)];
-    glog(`🏆 Takeover SUCCESS — ${c.name} seized from ${def.name}. ${q}`, 'good');
+    const q = _pickQuip(TO_WIN_QUIPS(p, def));
+    glog(`🏆 Takeover SUCCESS — ${c.name} seized from ${def.name}.`, 'good');
+    actionFeedPush(q, p.color, true);
   } else {
     const lost = Math.floor(cost * 0.5);
     const ret  = cost - lost;
@@ -409,8 +417,9 @@ function resolveTakeover(ok, c, def, cost, p, roll, effP) {
     p.cash += ret;
     c.failedTakeoversAgainst++;
     GS._marketInstability = Math.min(3, (GS._marketInstability || 0) + 1);
-    const q = _toFailQuips[Math.floor(Math.random() * _toFailQuips.length)];
-    glog(`💀 Takeover FAILED — ${c.name} held by ${def.name}. Lost $${lost}, $${ret} refunded. ${q}`, 'bad');
+    const q = _pickQuip(TO_FAIL_QUIPS(p, def));
+    glog(`💀 Takeover FAILED — ${c.name} held by ${def.name}. Lost $${lost}, $${ret} refunded.`, 'bad');
+    actionFeedPush(q, def.color, true);
   }
   updateRegionControl(); updateStockPrices(); render();
 }
@@ -428,8 +437,8 @@ function doStockBuy(sid) {
   s.sharesLeft--; s.demand++;
   p.actionsLeft--;
   SFX.buy();
-  const _buyQuips = ['Riding the wave.','Money on the table.','Diversify or die.','Smart money moves.','The market never sleeps.','Let it ride.','Bold play.','Compound interest smiles.'];
-  glog(`${p.name} bought ${s.name} stock @ $${cost} — ${_buyQuips[Math.floor(Math.random()*_buyQuips.length)]}`, 'good');
+  glog(`${p.name} bought ${s.name} stock @ $${cost}`, 'good');
+  actionFeedPush(_pickQuip(STOCK_BUY_QUIPS), p.color, false);
   updateStockPrices(); render(); renderRightSidebar();
   // Refresh modal if still open, otherwise clearAction handles auto-end
   if (p.actionsLeft > 0) { closeModal(); showStocksModal(); }
@@ -447,8 +456,8 @@ function doStockSell(sid) {
   s.sharesLeft++; s.demand = Math.max(0, s.demand - 1);
   p.actionsLeft--;
   SFX.sell();
-  const _sellQuips = ['Taking profits.','Get out while you can.','Cash is king.','Cutting losses, moving on.','Timing is everything.','Liquidating positions.'];
-  glog(`${p.name} sold ${s.name} @ $${s.price} — ${_sellQuips[Math.floor(Math.random()*_sellQuips.length)]}`, 'warn');
+  glog(`${p.name} sold ${s.name} @ $${s.price}`, 'warn');
+  actionFeedPush(_pickQuip(STOCK_SELL_QUIPS), p.color, false);
   updateStockPrices(); render(); renderRightSidebar();
   if (p.actionsLeft > 0) { closeModal(); showStocksModal(); }
   else { closeModal(); clearAction(); }
