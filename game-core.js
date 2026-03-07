@@ -540,11 +540,13 @@ function endRound() {
   GS.sectors.forEach(s => { if (s._bubble) { s.price = s._bubble; delete s._bubble; } });
 
   /* Revenue payout */
+  const _roundRevMap = {};
   GS.players.forEach(p => {
     p._noTakeover = false;
-    p._noAcquire  = false;  // clear Hostile Press lock
+    p._noAcquire  = false;
     const rev = calcRevenue(p);
     p.cash += rev;
+    _roundRevMap[p.id] = rev;
     GS.stats.rev[p.id]  = (GS.stats.rev[p.id]  || 0) + rev;
     const nw = calcNW(p);
     if (nw > GS.stats.peak[p.id]) GS.stats.peak[p.id] = nw;
@@ -580,7 +582,10 @@ function endRound() {
   GS.currentPlayerIdx = 0;
 
   glog(`=== ROUND ${GS.round}  ·  ${GS.phase.name} ===`, 'phase');
-  render(); updateTurnUI(); renderRoundTrack(); showPhaseAnnounce();
+  render(); updateTurnUI(); renderRoundTrack();
+  // Show round income summary on mobile, then phase announce after it fades
+  if (typeof showRoundSummary === 'function') showRoundSummary(_roundRevMap);
+  setTimeout(showPhaseAnnounce, 800);
 }
 
 /* ══════════════════════════════════════════════════════
