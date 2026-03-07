@@ -34,17 +34,17 @@ const CEO_TYPES = [
 ];
 const TACTICS_POOL = [
   { name:'Emergency Funding',  icon:'💰', effect:'+$60 cash injection',
-    action: p => { p.cash += 60; SFX.card(); glog(`${p.name}: Emergency Funding +$60`, 'good'); actionFeedPush('Found money in the couch cushions.', p.color, false); } },
+    action: p => { p.cash += 60; SFX.card(); glog(`${p.name}: Emergency Funding +$60 — Found money in the couch cushions.`, 'good'); } },
   { name:'Espionage',          icon:'🕵', effect:'Steal $50 from the leader',
-    action: p => { const lead=GS.players.filter(x=>x.id!==p.id).sort((a,b)=>calcNW(b)-calcNW(a))[0]; if(!lead){SFX.nope();return;} const amt=Math.min(50,lead.cash); lead.cash-=amt; p.cash+=amt; SFX.card(); glog(`${p.name}: Espionage — pilfered $${amt} from ${lead.name}`, 'warn'); actionFeedPush('Did you feel that?', p.color, true); } },
+    action: p => { const lead=GS.players.filter(x=>x.id!==p.id).sort((a,b)=>calcNW(b)-calcNW(a))[0]; if(!lead){SFX.nope();return;} const amt=Math.min(50,lead.cash); lead.cash-=amt; p.cash+=amt; SFX.card(); glog(`${p.name}: Espionage — pilfered $${amt} from ${lead.name}. Did you feel that?`, 'warn'); } },
   { name:'Hostile Press',      icon:'📰', effect:'Leader loses $40 · frozen from acquiring next turn',
-    action: p => { const lead=GS.players.filter(x=>x.id!==p.id).sort((a,b)=>calcNW(b)-calcNW(a))[0]; if(!lead){SFX.nope();return;} const amt=Math.min(40,lead.cash); lead.cash-=amt; lead._noAcquire=true; SFX.card(); glog(`${p.name}: Hostile Press! ${lead.name} bleeds $${amt} & can't acquire next turn`, 'warn'); actionFeedPush('Front page news.', p.color, true); } },
+    action: p => { const lead=GS.players.filter(x=>x.id!==p.id).sort((a,b)=>calcNW(b)-calcNW(a))[0]; if(!lead){SFX.nope();return;} const amt=Math.min(40,lead.cash); lead.cash-=amt; lead._noAcquire=true; SFX.card(); glog(`${p.name}: Hostile Press! ${lead.name} bleeds $${amt} & can't acquire. Front page news.`, 'warn'); } },
   { name:'Market Correction',  icon:'📉', effect:'ALL players (including you) lose 15% cash — use when trailing',
-    action: p => { GS.players.forEach(q => { const loss=Math.max(20,Math.floor(q.cash*0.15)); q.cash=Math.max(0,q.cash-loss); glog(`${q.name}: Market Correction −$${loss}`,'warn'); }); SFX.card(); actionFeedPush('Pain for all. Especially you.', p.color, true); render(); } },
+    action: p => { GS.players.forEach(q => { const loss=Math.max(20,Math.floor(q.cash*0.15)); q.cash=Math.max(0,q.cash-loss); glog(`${q.name}: Market Correction −$${loss}`,'warn'); }); SFX.card(); glog(`${p.name} triggered a Market Correction. Pain for all. Especially you.`, 'warn'); render(); } },
   { name:'Sovereign Bailout',  icon:'🏛', effect:'Recover your last failed takeover loss',
-    action: p => { const amt=p._lastTOFail||0; if(amt>0){ p.cash+=amt; p._lastTOFail=0; SFX.card(); glog(`${p.name}: Sovereign Bailout — $${amt} clawed back`, 'good'); actionFeedPush('Taxpayers will never know.', p.color, false); } else { p.cash+=30; SFX.card(); glog(`${p.name}: Sovereign Bailout — +$30 consolation`, 'good'); actionFeedPush('The government always finds a way.', p.color, false); } } },
+    action: p => { const amt=p._lastTOFail||0; if(amt>0){ p.cash+=amt; p._lastTOFail=0; SFX.card(); glog(`${p.name}: Sovereign Bailout — $${amt} clawed back. Taxpayers will never know.`, 'good'); } else { p.cash+=30; SFX.card(); glog(`${p.name}: Sovereign Bailout — +$30 consolation. The government always finds a way.`, 'good'); } } },
   { name:'Golden Parachute',   icon:'🪂', effect:'Sell your weakest company at 100% value',
-    action: p => { const c=GS.companies.filter(x=>x.ownerId===p.id).sort((a,b)=>calcCompanyValue(a)-calcCompanyValue(b))[0]; if(c){ const full=calcCompanyValue(c); p.cash+=full; c.ownerId=null; c.upgrades=0; c.level=1; c.revenue=c.initRevenue; c._traitDef=c.trait?3:0; updateRegionControl(); updateStockPrices(); render(); SFX.card(); glog(`${p.name}: Golden Parachute — ${c.name} offloaded at full $${full}`, 'good'); actionFeedPush('Never look back.', p.color, false); } else { SFX.nope(); glog(`${p.name}: No company to sell.`,'info'); } } },
+    action: p => { const c=GS.companies.filter(x=>x.ownerId===p.id).sort((a,b)=>calcCompanyValue(a)-calcCompanyValue(b))[0]; if(c){ const full=calcCompanyValue(c); p.cash+=full; c.ownerId=null; c.upgrades=0; c.level=1; c.revenue=c.initRevenue; c._traitDef=c.trait?3:0; updateRegionControl(); updateStockPrices(); render(); SFX.card(); glog(`${p.name}: Golden Parachute — ${c.name} offloaded at full $${full}. Never look back.`, 'good'); } else { SFX.nope(); glog(`${p.name}: No company to sell.`,'info'); } } },
 ];
 const GLOBAL_EVENTS = [
   { name:'TECH SURGE',    icon:'💻', effect:'Tech sector +5',                      apply: () => { const s=GS.sectors.find(x=>x.name==='Tech'); if(s) s.price=Math.min(25,s.price+5); } },
@@ -495,14 +495,12 @@ function aiDecide(pid) {
   if (best.type === 'acquire') {
     p.cash -= best.t.baseValue; best.t.ownerId = pid;
     const q = _pickQuip(ACQ_QUIPS);
-    SFX.aiact(); glog(`${p.name} acquired ${best.t.name} ($${best.t.baseValue}) — ${q}`, 'info');
-    actionFeedPush(`${p.name} acquired ${best.t.name} — ${q}`, p.color, false);
+    SFX.aiact(); glog(`${p.name} acquired ${best.t.name} — ${q}`, 'good');
   }
   else if (best.type === 'upgrade') {
     applyUpgrade(best.t); SFX.aiact();
     const q = _pickQuip(UPG_QUIPS);
-    glog(`${p.name} upgraded ${best.t.name} — ${q}`, 'info');
-    actionFeedPush(`${p.name} upgraded ${best.t.name} — ${q}`, p.color, false);
+    glog(`${p.name} upgraded ${best.t.name} — ${q}`, 'good');
   }
   else if (best.type === 'takeover') {
     const { c, tk } = best; const def = GS.players[c.ownerId];
@@ -514,9 +512,7 @@ function aiDecide(pid) {
     if (roll <= ep) {
       c.ownerId = pid; GS.stats.tos[pid]++;
       const q = _pickQuip(TO_WIN_QUIPS(p, def));
-      SFX.aiact(); glog(`${p.name} ⚔ captured ${c.name}  [${Math.round(ep * 100)}%] — ${q}`, 'warn');
-      const isDanger = c.ownerId === 0; // was the human's company
-      actionFeedPush(`${p.name} seized ${c.name} — ${q}`, p.color, isDanger);
+      SFX.aiact(); glog(`${p.name} ⚔ seized ${c.name} from ${def.name} — ${q}`, 'warn');
     } else {
       const ret  = Math.floor(tk.cost * 0.5);
       const lost = tk.cost - ret;
@@ -525,8 +521,7 @@ function aiDecide(pid) {
       c.failedTakeoversAgainst++;
       GS._marketInstability = Math.min(3, GS._marketInstability + 1);
       const q = _pickQuip(TO_FAIL_QUIPS(p, def));
-      glog(`${p.name} takeover failed: ${c.name} — $${ret} returned. ${q}`, 'info');
-      actionFeedPush(`${p.name} failed to take ${c.name} — ${q}`, def.color || p.color, false);
+      glog(`${p.name} failed takeover on ${c.name} — ${q}`, 'warn');
     }
   }
   else if (best.type === 'invest') {
@@ -534,8 +529,7 @@ function aiDecide(pid) {
     p.cash -= s.price; p.stocks[s.id] = (p.stocks[s.id] || 0) + 1;
     s.sharesLeft--; s.demand++;
     const q = _pickQuip(STOCK_BUY_QUIPS);
-    SFX.aiact(); glog(`${p.name} bought ${s.name} stock — ${q}`, 'info');
-    actionFeedPush(`${p.name} bought ${s.name} stock — ${q}`, p.color, false);
+    SFX.aiact(); glog(`${p.name} bought ${s.name} stock — ${q}`, 'good');
   }
 
   updateRegionControl(); updateStockPrices(); render();
@@ -596,7 +590,7 @@ function endRound() {
   render(); updateTurnUI(); renderRoundTrack();
   // Show round income summary (7s), then phase announce after it fades
   if (typeof showRoundSummary === 'function') showRoundSummary(_roundRevMap);
-  setTimeout(showPhaseAnnounce, 7300);
+  setTimeout(showPhaseAnnounce, 5300); // fires just after summary fades (5s)
 }
 
 /* ══════════════════════════════════════════════════════
