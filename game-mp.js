@@ -746,10 +746,11 @@ function mpExecuteRemoteAction(data, slotIdx) {
       const c = GS.companies.find(x => x.id === data.cid);
       if (c && c.ownerId === null && p.cash >= c.baseValue && !p._noAcquire) {
         p.cash -= c.baseValue; c.ownerId = slotIdx; p.actionsLeft--;
-        glog(`${p.name} acquired ${c.name}`, 'info');
         const q = _pickQuip(ACQ_QUIPS);
-        actionFeedPush(q, p.color, false);
-        mpHostBroadcast({ type:'quip', text:q, color:p.color, isDanger:false });
+        glog(`${p.name} acquired ${c.name} — ${q}`, 'info');
+        const feedMsg = `${p.name} acquired ${c.name} — ${q}`;
+        if (slotIdx !== MP.localSlot) actionFeedPush(feedMsg, p.color, false);
+        mpHostBroadcast({ type:'quip', text:feedMsg, color:p.color, isDanger:false });
         updateRegionControl(); updateStockPrices();
       } else if (p._noAcquire) {
         glog(`${p.name}: Hostile Press — acquisition blocked!`, 'warn');
@@ -760,10 +761,11 @@ function mpExecuteRemoteAction(data, slotIdx) {
       const c = GS.companies.find(x => x.id === data.cid);
       if (c && c.ownerId === slotIdx && applyUpgrade(c)) {
         p.actionsLeft--;
-        glog(`${p.name} upgraded ${c.name}`, 'info');
         const q = _pickQuip(UPG_QUIPS);
-        actionFeedPush(q, p.color, false);
-        mpHostBroadcast({ type:'quip', text:q, color:p.color, isDanger:false });
+        glog(`${p.name} upgraded ${c.name} — ${q}`, 'info');
+        const feedMsg = `${p.name} upgraded ${c.name} — ${q}`;
+        if (slotIdx !== MP.localSlot) actionFeedPush(feedMsg, p.color, false);
+        mpHostBroadcast({ type:'quip', text:feedMsg, color:p.color, isDanger:false });
         updateStockPrices();
       }
       break;
@@ -776,10 +778,11 @@ function mpExecuteRemoteAction(data, slotIdx) {
         c.upgrades = 0; c.level = 1; c.revenue = c.initRevenue;
         c._traitDef = c.trait ? 3 : 0;
         p.actionsLeft--;
-        glog(`${p.name} sold ${c.name} for $${sp}`, 'warn');
         const q = _pickQuip(SELL_CO_QUIPS);
-        actionFeedPush(q, p.color, false);
-        mpHostBroadcast({ type:'quip', text:q, color:p.color, isDanger:false });
+        glog(`${p.name} sold ${c.name} for $${sp} — ${q}`, 'warn');
+        const feedMsg = `${p.name} sold ${c.name} — ${q}`;
+        if (slotIdx !== MP.localSlot) actionFeedPush(feedMsg, p.color, false);
+        mpHostBroadcast({ type:'quip', text:feedMsg, color:p.color, isDanger:false });
         updateRegionControl(); updateStockPrices();
       }
       break;
@@ -831,7 +834,10 @@ function mpExecuteRemoteAction(data, slotIdx) {
           }
           setTimeout(() => {
             glog(logLine, ok ? 'warn' : 'info');
-            actionFeedPush(quip, ok ? p.color : def.color, true);
+            // Only show on feed if host wasn't the attacker
+            if (slotIdx !== MP.localSlot) {
+              actionFeedPush(quip, ok ? p.color : def.color, true);
+            }
           }, 2400);
 
           // Delay state broadcast to let animation play before board updates
@@ -851,10 +857,11 @@ function mpExecuteRemoteAction(data, slotIdx) {
       if (s && s.sharesLeft > 0 && p.cash >= cost) {
         p.cash -= cost; p.stocks[data.sid]=(p.stocks[data.sid]||0)+1;
         s.sharesLeft--; s.demand++; p.actionsLeft--;
-        glog(`${p.name} bought ${s.name} @ $${cost}`, 'info');
         const q = _pickQuip(STOCK_BUY_QUIPS);
-        actionFeedPush(q, p.color, false);
-        mpHostBroadcast({ type:'quip', text:q, color:p.color, isDanger:false });
+        glog(`${p.name} bought ${s.name} @ $${cost} — ${q}`, 'info');
+        const feedMsg = `${p.name} bought ${s.name} — ${q}`;
+        if (slotIdx !== MP.localSlot) actionFeedPush(feedMsg, p.color, false);
+        mpHostBroadcast({ type:'quip', text:feedMsg, color:p.color, isDanger:false });
         updateStockPrices();
       }
       break;
@@ -864,10 +871,11 @@ function mpExecuteRemoteAction(data, slotIdx) {
       if (s && p.stocks[data.sid] > 0) {
         p.cash += s.price; p.stocks[data.sid]--;
         s.sharesLeft++; s.demand=Math.max(0,s.demand-1); p.actionsLeft--;
-        glog(`${p.name} sold ${s.name} @ $${s.price}`, 'info');
         const q = _pickQuip(STOCK_SELL_QUIPS);
-        actionFeedPush(q, p.color, false);
-        mpHostBroadcast({ type:'quip', text:q, color:p.color, isDanger:false });
+        glog(`${p.name} sold ${s.name} @ $${s.price} — ${q}`, 'info');
+        const feedMsg = `${p.name} sold ${s.name} stock — ${q}`;
+        if (slotIdx !== MP.localSlot) actionFeedPush(feedMsg, p.color, false);
+        mpHostBroadcast({ type:'quip', text:feedMsg, color:p.color, isDanger:false });
         updateStockPrices();
       }
       break;
