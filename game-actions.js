@@ -63,8 +63,13 @@ function clearAction() {
     if (toast) { toast.classList.add('show'); }
     _autoEndTimer = setTimeout(() => {
       if (toast) toast.classList.remove('show');
-      if (GS.currentPlayerIdx === slot && p.actionsLeft <= 0 && !GS.gameOver) endTurn();
-    }, 1100);
+      // Re-read state at fire time — MP state may have changed since timer was set
+      const pNow = GS.players[mySlot()];
+      if (GS.currentPlayerIdx === mySlot() && pNow && pNow.actionsLeft <= 0 && !GS.gameOver) {
+        _autoEndTimer = null;
+        endTurn();
+      }
+    }, 1400);
   } else if (p.actionsLeft > 0) {
     const left = p.actionsLeft;
     setInfo(`Action complete — <b style="color:var(--gold)">${left} action${left !== 1 ? 's' : ''} remaining</b>. [Space] to end turn early.`);
