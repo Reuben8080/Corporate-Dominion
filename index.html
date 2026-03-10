@@ -151,27 +151,6 @@ body   { display: flex; flex-direction: column; height: 100vh; height: 100dvh; o
   font-weight: 700; transition: color var(--t-med);
 }
 .topbar-right { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
-/* ── PC Leave Game button — fixed bottom-left, above sidebar, always reachable ── */
-#pc-leave-btn {
-  display: none;
-  position: fixed;
-  bottom: 16px;
-  left: 16px;
-  z-index: 500;
-  height: 34px; padding: 0 14px;
-  border-radius: var(--r2);
-  border: 1px solid rgba(244,63,94,.45);
-  background: rgba(9,9,11,.92);
-  color: var(--red-lt);
-  font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .08em;
-  cursor: pointer; transition: all var(--t-fast);
-  align-items: center; gap: 6px;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 2px 12px rgba(0,0,0,.5);
-}
-#pc-leave-btn:hover { background: rgba(244,63,94,.18); border-color: var(--red-lt); box-shadow: 0 0 16px rgba(244,63,94,.3); }
-body.game-active #pc-leave-btn { display: flex; }
-@media (max-width: 640px) { #pc-leave-btn { display: none !important; } }
 .icon-btn {
   width: 32px; height: 32px; border-radius: var(--r3);
   border: 1px solid var(--border); color: var(--tx-lo);
@@ -187,8 +166,10 @@ body.game-active #pc-leave-btn { display: flex; }
   width: 248px; flex-shrink: 0;
   background: rgba(9,9,11,.85); border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
-  height: 100%; position: relative;
-  overflow: hidden;
+  height: 100%;
+  /* No overflow:hidden — player-list and log-wrap manage their own scroll.
+     overflow:hidden was clipping the leave button and creating a stacking
+     context that swallowed position:fixed children. */
 }
 .sidebar-hdr {
   padding: 10px 14px 8px;
@@ -207,26 +188,27 @@ body.game-active #pc-leave-btn { display: flex; }
    log-hdr should NOT have margin-top:auto — the log-wrap's flex:1 already fills space above it. */
 .log-hdr { border-top: 1px solid var(--border); flex-shrink: 0; }
 .leave-sidebar-btn {
-  /* Normal flex item — sits below log-wrap, always visible */
-  display: flex;
   flex-shrink: 0;
-  margin: 8px 10px 10px;
-  padding: 10px 0; border-radius: var(--r2);
-  background: rgba(244,63,94,.08); border: 1px solid rgba(244,63,94,.35);
-  color: var(--red-lt); font-family: var(--font-mono); font-size: 10px;
-  font-weight: 700; letter-spacing: .1em; cursor: pointer;
-  transition: all var(--t-fast);
-  align-items: center; justify-content: center; gap: 6px;
+  margin: 0;
+  padding: 12px 0;
+  border: none;
+  border-top: 1px solid rgba(244,63,94,.35);
+  background: rgba(244,63,94,.10);
+  color: var(--red-lt);
+  font-family: var(--font-mono); font-size: 10px;
+  font-weight: 700; letter-spacing: .12em;
+  cursor: pointer;
+  transition: background var(--t-fast);
+  display: flex;
+  align-items: center; justify-content: center; gap: 7px;
   touch-action: manipulation;
+  width: 100%;
 }
 .leave-sidebar-btn:hover, .leave-sidebar-btn:active {
-  background: rgba(244,63,94,.22); border-color: var(--red-lt);
-  box-shadow: 0 0 14px rgba(244,63,94,.25);
+  background: rgba(244,63,94,.25);
 }
-/* Hide before game starts (JS adds .game-active to body on startGame/mpStartGame) */
 body:not(.game-active) .leave-sidebar-btn { display: none; }
-/* On PC the topbar button handles Leave — hide sidebar duplicate */
-@media (min-width: 641px) { .leave-sidebar-btn { display: none !important; } }
+/* Mobile keeps the sidebar leave btn; desktop also shows it (sidebar is always visible on PC) */
 
 /* Player entries */
 #player-list { flex-shrink: 0; overflow-y: auto; max-height: 52%; }
@@ -1312,7 +1294,6 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
   .logo-icon { width: 30px; height: 30px; font-size: 9px; flex-shrink: 0; }
   .logo-text-wrap { display: none; }
   .market-lbl { display: none; }
-  .topbar-leave-btn { display: none !important; } /* removed — replaced by #pc-leave-btn */
   #market-status {
     flex: 1;
     display: flex !important;
@@ -1902,9 +1883,6 @@ button, [onclick], .setup-tab, .mode-card, .dock-btn, .tcard, .cc, .mbtn, .sab {
 
 <!-- PLAYER STRIP (mobile — filled by renderPlayerHUD) -->
 <div id="player-strip"></div>
-
-<!-- PC Leave Game — fixed bottom-left, visible on desktop when game active -->
-<button id="pc-leave-btn" onclick="leaveGame()">✕ LEAVE GAME</button>
 
 <!-- MAIN LAYOUT -->
 <div id="main">
