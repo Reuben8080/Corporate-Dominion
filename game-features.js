@@ -189,9 +189,9 @@ function _feedNext() {
   inner.classList.add('visible');
   if (isDanger) inner.classList.add('danger');
 
-  // Hold time: base 3.5s + 40ms per character, danger adds 2s extra; min 3.5s max 9s
-  const readTime = Math.min(9000, Math.max(3500, text.length * 40));
-  const hold = isDanger ? readTime + 2000 : readTime;
+  // Hold time: base 2.3s + 27ms per char, danger +1.5s; capped 2.3s–6s
+  const readTime = Math.min(6000, Math.max(2300, text.length * 27));
+  const hold = isDanger ? readTime + 1500 : readTime;
   clearTimeout(_feedTimer);
   _feedTimer = setTimeout(_feedDismiss, hold);
 }
