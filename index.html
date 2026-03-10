@@ -151,19 +151,27 @@ body   { display: flex; flex-direction: column; height: 100vh; height: 100dvh; o
   font-weight: 700; transition: color var(--t-med);
 }
 .topbar-right { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
-/* Topbar leave button — PC only, appears when game is active */
-.topbar-leave-btn {
-  display: none; /* shown by game-active */
-  height: 32px; padding: 0 12px; border-radius: var(--r3);
-  border: 1px solid rgba(244,63,94,.4);
-  background: rgba(244,63,94,.08);
-  color: var(--red-lt); font-family: var(--font-mono);
-  font-size: 9px; font-weight: 700; letter-spacing: .08em;
+/* ── PC Leave Game button — fixed bottom-left, above sidebar, always reachable ── */
+#pc-leave-btn {
+  display: none;
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  z-index: 500;
+  height: 34px; padding: 0 14px;
+  border-radius: var(--r2);
+  border: 1px solid rgba(244,63,94,.45);
+  background: rgba(9,9,11,.92);
+  color: var(--red-lt);
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .08em;
   cursor: pointer; transition: all var(--t-fast);
-  align-items: center; gap: 5px;
+  align-items: center; gap: 6px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px rgba(0,0,0,.5);
 }
-.topbar-leave-btn:hover { background: rgba(244,63,94,.22); border-color: var(--red-lt); }
-body.game-active .topbar-leave-btn { display: flex; }
+#pc-leave-btn:hover { background: rgba(244,63,94,.18); border-color: var(--red-lt); box-shadow: 0 0 16px rgba(244,63,94,.3); }
+body.game-active #pc-leave-btn { display: flex; }
+@media (max-width: 640px) { #pc-leave-btn { display: none !important; } }
 .icon-btn {
   width: 32px; height: 32px; border-radius: var(--r3);
   border: 1px solid var(--border); color: var(--tx-lo);
@@ -221,32 +229,32 @@ body:not(.game-active) .leave-sidebar-btn { display: none; }
 @media (min-width: 641px) { .leave-sidebar-btn { display: none !important; } }
 
 /* Player entries */
-#player-list { flex-shrink: 0; overflow: hidden; max-height: 42%; }
+#player-list { flex-shrink: 0; overflow-y: auto; max-height: 52%; }
 .pe {
-  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  padding: 7px 14px; border-bottom: 1px solid var(--border);
   position: relative; transition: background var(--t-fast);
 }
 .pe.active-p { background: rgba(99,102,241,.04); }
 .pe-active-bar {
-  position: absolute; left: 0; top: 10px; bottom: 10px;
+  position: absolute; left: 0; top: 8px; bottom: 8px;
   width: 2px; border-radius: 0 2px 2px 0;
 }
 .pe-name {
-  font-family: var(--font-ui); font-weight: 600; font-size: 13px;
-  margin-bottom: 6px; padding-left: 8px;
+  font-family: var(--font-ui); font-weight: 600; font-size: 12px;
+  margin-bottom: 4px; padding-left: 8px;
   display: flex; align-items: center; gap: 6px;
 }
 .pe-star { font-size: 10px; opacity: .7; }
-.pe-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding-left: 8px; margin-bottom: 6px; }
-.pe-stat-lbl { font-family: var(--font-mono); font-size: 8px; color: var(--tx-lo); text-transform: uppercase; letter-spacing: .08em; }
-.pe-cash { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--green-lt); }
-.pe-nw   { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--tx-md); text-align: right; }
-.pe-bars { padding-left: 8px; display: flex; gap: 3px; margin-top: 2px; }
+.pe-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding-left: 8px; margin-bottom: 4px; }
+.pe-stat-lbl { font-family: var(--font-mono); font-size: 7px; color: var(--tx-lo); text-transform: uppercase; letter-spacing: .08em; }
+.pe-cash { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--green-lt); }
+.pe-nw   { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--tx-md); text-align: right; }
+.pe-bars { padding-left: 8px; display: flex; gap: 3px; margin-top: 1px; }
 .pe-bar  { height: 3px; flex: 1; border-radius: 2px; transition: all var(--t-med); }
 
 /* Activity log */
 #log-wrap { flex: 1; min-height: 0; overflow-y: auto; }
-#log-area  { padding: 4px 6px; }
+#log-area  { padding: 4px 6px 40px; }
 .le {
   font-family: var(--font-mono); font-size: 8px; line-height: 1.6;
   padding: 2px 6px; border-radius: 3px; margin-bottom: 1px;
@@ -989,56 +997,66 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
 }
 
 /* ════════════════════════════════════════
-   ACTION FEED TICKER (mobile only)
-   Sits just above the dock — shows opponent
-   actions one at a time, auto-fades, no tap needed
+   ACTION FEED TICKER
+   Floats above dock on all screen sizes.
+   Shows opponent actions one at a time,
+   auto-fades, no tap needed.
 ════════════════════════════════════════ */
 #action-feed {
-  display: none; /* shown only in mobile media query */
   position: fixed;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 232px);
-  left: 50%; transform: translateX(-50%);
+  bottom: 80px;           /* desktop default: above sticky dock + gap */
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 210;
   pointer-events: none;
-  width: calc(100% - 24px); max-width: 380px;
+  width: calc(100% - 320px); /* stay clear of sidebars on desktop */
+  max-width: 480px;
+  min-width: 260px;
 }
 #action-feed-inner {
-  display: flex; align-items: flex-start; gap: 8px;
-  background: rgba(9,9,11,.90);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(9,9,11,.93);
   border: 1px solid var(--border-l);
-  border-radius: 16px;
-  padding: 10px 14px;
-  font-family: var(--font-mono); font-size: 11px;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-family: var(--font-mono);
   color: var(--tx-hi);
-  box-shadow: 0 4px 20px rgba(0,0,0,.55);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 6px 24px rgba(0,0,0,.60);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   opacity: 0;
-  transform: translateY(6px);
+  transform: translateY(8px);
   transition: opacity .25s ease, transform .25s ease;
-  min-height: 38px;
 }
 #action-feed-inner.visible {
   opacity: 1;
   transform: translateY(0);
 }
 #action-feed-inner.danger {
-  border-color: var(--red-lt);
-  background: rgba(244,63,94,.12);
-  box-shadow: 0 0 18px rgba(244,63,94,.35), 0 4px 20px rgba(0,0,0,.55);
+  border-color: rgba(244,63,94,.6);
+  background: rgba(20,5,8,.95);
+  box-shadow: 0 0 20px rgba(244,63,94,.40), 0 6px 24px rgba(0,0,0,.60);
   animation: feedDangerPulse 0.55s ease-in-out 2;
 }
 @keyframes feedDangerPulse {
-  0%,100% { box-shadow: 0 0 18px rgba(244,63,94,.35), 0 4px 20px rgba(0,0,0,.55); }
-  50%      { box-shadow: 0 0 32px rgba(244,63,94,.70), 0 4px 20px rgba(0,0,0,.55); }
+  0%,100% { box-shadow: 0 0 20px rgba(244,63,94,.40), 0 6px 24px rgba(0,0,0,.60); }
+  50%      { box-shadow: 0 0 36px rgba(244,63,94,.75), 0 6px 24px rgba(0,0,0,.60); }
 }
 #action-feed-dot {
-  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
-  background: var(--tx-lo); margin-top: 4px;
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0; margin-top: 3px;
+  background: var(--tx-lo);
 }
 #action-feed-text {
-  flex: 1; white-space: normal; word-break: break-word;
-  font-size: 11px; line-height: 1.5;
+  flex: 1;
+  min-width: 0;           /* allow flex child to shrink below content size */
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  font-size: 11px;
+  line-height: 1.6;
 }
 
 /* ── Round Summary Card (all screens — opacity controls visibility) ── */
@@ -1189,7 +1207,7 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
   .co-name { font-size: 10px; }
   .co-rev-val { font-size: 14px; }
   /* Feed and summary position — right sidebar gone, sticky dock */
-  #action-feed   { bottom: 120px; }
+  #action-feed   { bottom: 80px; width: calc(100% - 200px); max-width: 480px; }
   #round-summary { bottom: 172px; }
 }
 
@@ -1294,7 +1312,7 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
   .logo-icon { width: 30px; height: 30px; font-size: 9px; flex-shrink: 0; }
   .logo-text-wrap { display: none; }
   .market-lbl { display: none; }
-  .topbar-leave-btn { display: none !important; } /* sidebar drawer has it on mobile */
+  .topbar-leave-btn { display: none !important; } /* removed — replaced by #pc-leave-btn */
   #market-status {
     flex: 1;
     display: flex !important;
@@ -1413,7 +1431,12 @@ input[type=range] { flex: 1; accent-color: var(--indigo); }
   /* ── TOASTS: clear of fixed dock ── */
   #auto-end-toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 188px); }
   #net-lock { bottom: calc(env(safe-area-inset-bottom, 0px) + 188px); font-size: 11px; padding: 8px 16px; }
-  #action-feed   { display: block; bottom: calc(env(safe-area-inset-bottom, 0px) + 232px); }
+  #action-feed {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 232px);
+    width: calc(100% - 20px);
+    max-width: 100%;
+    min-width: 0;
+  }
   #round-summary { bottom: calc(env(safe-area-inset-bottom, 0px) + 290px); }
 
   /* ── PLAYER STRIP ── */
@@ -1870,7 +1893,6 @@ button, [onclick], .setup-tab, .mode-card, .dock-btn, .tcard, .cc, .mbtn, .sab {
   </div>
   <div id="round-track" style="display:flex;gap:4px;align-items:center;flex-shrink:0"></div>
   <div class="topbar-right">
-    <button class="topbar-leave-btn" onclick="leaveGame()" title="Leave Game">✕ LEAVE</button>
     <button class="icon-btn" id="chat-btn" onclick="toggleChat()" title="Chat">💬<div id="chat-unread" class="chat-unread"></div></button>
     <button class="icon-btn" onclick="toggleLeft()" title="Players">☰</button>
     <button class="icon-btn" id="snd-btn" onclick="showSoundMenu()" title="Sound">🔊</button>
@@ -1880,6 +1902,9 @@ button, [onclick], .setup-tab, .mode-card, .dock-btn, .tcard, .cc, .mbtn, .sab {
 
 <!-- PLAYER STRIP (mobile — filled by renderPlayerHUD) -->
 <div id="player-strip"></div>
+
+<!-- PC Leave Game — fixed bottom-left, visible on desktop when game active -->
+<button id="pc-leave-btn" onclick="leaveGame()">✕ LEAVE GAME</button>
 
 <!-- MAIN LAYOUT -->
 <div id="main">
