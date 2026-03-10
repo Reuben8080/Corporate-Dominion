@@ -126,6 +126,22 @@ body   { display: flex; flex-direction: column; height: 100vh; height: 100dvh; o
   display: flex; align-items: center; gap: 12px; padding: 0 16px;
   z-index: 220;
 }
+/* Top-left X leave button — PC only, game-active only */
+#topbar-leave-x {
+  display: none;
+  width: 32px; height: 32px; border-radius: var(--r3);
+  border: 1px solid rgba(244,63,94,.4);
+  background: rgba(244,63,94,.08);
+  color: var(--red-lt);
+  align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all var(--t-fast);
+  flex-shrink: 0;
+}
+#topbar-leave-x:hover { background: rgba(244,63,94,.22); border-color: var(--red-lt); }
+body.game-active #topbar-leave-x { display: flex; }
+@media (max-width: 640px) { #topbar-leave-x { display: none !important; } }
+
 #logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .logo-icon {
   width: 32px; height: 32px; border-radius: 8px;
@@ -151,6 +167,20 @@ body   { display: flex; flex-direction: column; height: 100vh; height: 100dvh; o
   font-weight: 700; transition: color var(--t-med);
 }
 .topbar-right { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+/* Leave Game button in topbar — beside Rules, PC only */
+.topbar-leave-btn {
+  display: none;
+  height: 32px; padding: 0 11px; border-radius: var(--r3);
+  border: 1px solid rgba(244,63,94,.4);
+  background: rgba(244,63,94,.08);
+  color: var(--red-lt); font-family: var(--font-mono);
+  font-size: 9px; font-weight: 700; letter-spacing: .06em;
+  cursor: pointer; transition: all var(--t-fast);
+  align-items: center; gap: 5px;
+}
+.topbar-leave-btn:hover { background: rgba(244,63,94,.22); border-color: var(--red-lt); }
+body.game-active .topbar-leave-btn { display: flex; }
+@media (max-width: 640px) { .topbar-leave-btn { display: none !important; } }
 .icon-btn {
   width: 32px; height: 32px; border-radius: var(--r3);
   border: 1px solid var(--border); color: var(--tx-lo);
@@ -1862,6 +1892,7 @@ button, [onclick], .setup-tab, .mode-card, .dock-btn, .tcard, .cc, .mbtn, .sab {
 
 <!-- TOP BAR -->
 <div id="topbar">
+  <button id="topbar-leave-x" onclick="leaveGame()" title="Leave Game">✕</button>
   <div id="logo">
     <div class="logo-icon">CD</div>
     <div class="logo-text-wrap">
@@ -1878,6 +1909,7 @@ button, [onclick], .setup-tab, .mode-card, .dock-btn, .tcard, .cc, .mbtn, .sab {
     <button class="icon-btn" onclick="toggleLeft()" title="Players">☰</button>
     <button class="icon-btn" id="snd-btn" onclick="showSoundMenu()" title="Sound">🔊</button>
     <button class="icon-btn" onclick="showRulebook()" title="Rules">?</button>
+    <button class="topbar-leave-btn" onclick="leaveGame()" title="Leave Game">✕ LEAVE</button>
   </div>
 </div>
 
