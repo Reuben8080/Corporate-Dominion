@@ -347,6 +347,13 @@ function applyUpgrade(company, free=false) {
 ══════════════════════════════════════════════════════ */
 async function endTurn() {
   if (!isMyTurn() || GS.gameOver) return;
+  // Cancel any pending auto-end timer — we're ending now
+  if (typeof _autoEndTimer !== 'undefined' && _autoEndTimer) {
+    clearTimeout(_autoEndTimer);
+    _autoEndTimer = null;
+  }
+  const toast = document.getElementById('auto-end-toast');
+  if (toast) toast.classList.remove('show');
   SFX.endTurn();
   const humanSlot = mySlot();
   GS.currentPlayerIdx = humanSlot + 1; // advance past human — AI loop picks up from here
