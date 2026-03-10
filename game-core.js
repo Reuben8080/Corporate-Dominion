@@ -629,14 +629,24 @@ function rollEvent() {
 function isBankrupt(p) {
   const hasCompanies = GS.companies.some(c => c.ownerId === p.id);
   const hasStocks    = Object.values(p.stocks || {}).some(q => q > 0);
-  // Hard broke: no cash, no assets
+
+  // Hard broke: no cash, no assets — always bankrupt
   if (p.cash <= 0 && !hasCompanies && !hasStocks) return true;
-  // Economic zombie: no revenue sources and can't afford ANY available company — stranded from round 3
-  if (!hasCompanies && !hasStocks && GS.round >= 3) {
+
+  // Economic zombie check — only from round 5 to avoid false-booting early-game MP players.
+  // Also: never fire on human players in MP games (they may be saving cash strategically).
+  const isMPHuman = typeof MP !== 'undefined' && MP.active && p.isHuman;
+  if (!isMPHuman && !hasCompanies && !hasStocks && GS.round >= 5) {
     const cheapest = GS.companies
       .filter(c => c.ownerId === null)
       .reduce((min, c) => Math.min(min, c.baseValue), Infinity);
-    if (p.cash < cheapest) return true;
+    // Require 2 consecutive rounds unable to buy (tracked by _brokeCount)
+    if (p.cash < cheapest) {
+      p._brokeCount = (p._brokeCount || 0) + 1;
+      if (p._brokeCount >= 2) return true;
+    } else {
+      p._brokeCount = 0;
+    }
   }
   return false;
 }
