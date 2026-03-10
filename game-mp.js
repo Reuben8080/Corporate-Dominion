@@ -344,7 +344,27 @@ function mpInitClient() {
       if (_retrying) return; // intentional close during retry — don't show modal
       setLobbyStatus('err', 'Lost connection to host.');
       if (!GS.gameOver) {
-        showModal('Disconnected', `<p style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx-md);margin-bottom:14px">Lost connection to the host. The game cannot continue.</p><div class="mbtns"><button class="mbtn pri" onclick="location.reload()">Reload</button></div>`);
+        // Show modal with countdown — auto-reload after 45s if no action taken
+        let _secsLeft = 45;
+        let _leaveTimer = null;
+        const _tick = () => {
+          const cd = document.getElementById('_dc-countdown');
+          if (cd) cd.textContent = _secsLeft;
+          if (_secsLeft <= 0) { clearInterval(_leaveTimer); location.reload(); }
+          _secsLeft--;
+        };
+        showModal('⚠ Connection Lost', `
+          <p style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx-md);margin-bottom:14px">
+            Lost connection to the host. The game cannot continue.
+          </p>
+          <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--tx-lo);margin-bottom:18px">
+            Auto-leaving in <b id="_dc-countdown" style="color:var(--amber)">45</b>s…
+          </p>
+          <div class="mbtns">
+            <button class="mbtn pri" onclick="location.reload()">Leave Now</button>
+          </div>`);
+        _leaveTimer = setInterval(_tick, 1000);
+        _tick();
       }
     });
   }
@@ -368,6 +388,10 @@ function mpInitClient() {
       setTimeout(mpInitClient, 400);
     } else {
       setLobbyStatus('err', `Connection error: ${e.type} — check internet and try again.`);
+      // If mid-game, auto-leave after 45s
+      if (GS.round > 0 && !GS.gameOver && GS.players.length > 0) {
+        setTimeout(() => { if (!GS.gameOver) location.reload(); }, 45000);
+      }
     }
   });
 }
