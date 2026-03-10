@@ -128,9 +128,11 @@ function glog(msg, type='info') {
   el.insertBefore(d, el.firstChild);
   while (el.children.length > 120) el.removeChild(el.lastChild);
 
-  /* ── Action feed ticker ── */
-  // 'phase' and 'info' are system noise — skip feed for those
-  if (type === 'phase' || type === 'info') return;
+  /* ── Action feed ticker — MP only ── */
+  const isMPActive = typeof MP !== 'undefined' && MP.active;
+  if (!isMPActive) return; // solo vs AI: no feed ticker
+
+  if (type === 'phase' || type === 'info') return; // system noise
   if (typeof actionFeedPush !== 'function') return;
 
   const colorMap = {
@@ -142,16 +144,12 @@ function glog(msg, type='info') {
   const feedColor = colorMap[type] || null;
   const isDanger  = type === 'bad' || type === 'warn';
 
-  /* In solo OR when host in MP: push to local feed */
-  const isMPHost = typeof MP !== 'undefined' && MP.active && MP.isHost;
-  const isSolo   = typeof MP === 'undefined' || !MP.active;
-  if (isSolo || isMPHost) {
+  /* Host pushes to local feed + broadcasts to all clients */
+  if (MP.isHost) {
     actionFeedPush(msg, feedColor, isDanger);
-  }
-
-  /* MP host: broadcast feed entry to all clients */
-  if (isMPHost && typeof mpHostBroadcast === 'function') {
-    mpHostBroadcast({ type: 'feed', text: msg, color: feedColor, isDanger });
+    if (typeof mpHostBroadcast === 'function') {
+      mpHostBroadcast({ type: 'feed', text: msg, color: feedColor, isDanger });
+    }
   }
 }
 
@@ -191,8 +189,9 @@ function _feedNext() {
   inner.classList.add('visible');
   if (isDanger) inner.classList.add('danger');
 
-  // Danger messages stay 5s, normal 3s; if queue has more, chain faster
-  const hold = isDanger ? 5000 : (_feedQueue.length > 2 ? 2000 : 3000);
+  // Hold time: base 3.5s + 40ms per character, danger adds 2s extra; min 3.5s max 9s
+  const readTime = Math.min(9000, Math.max(3500, text.length * 40));
+  const hold = isDanger ? readTime + 2000 : readTime;
   clearTimeout(_feedTimer);
   _feedTimer = setTimeout(_feedDismiss, hold);
 }
