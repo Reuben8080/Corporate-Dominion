@@ -212,6 +212,10 @@ function mpInitHost() {
 }
 
 function mpHostReceive(data, peerId) {
+  if (data.type === 'pong') {
+    _mpLastPongTime[peerId] = Date.now();
+    return;
+  }
   if (data.type === 'ready') {
     const slot = MP.slots.findIndex(s => s.peerId === peerId);
     if (slot !== -1) {
@@ -397,8 +401,16 @@ function mpInitClient() {
 }
 
 function mpClientReceive(data) {
+  // Update last-packet time for watchdog on every packet from host
+  _mpLastHostPacket = Date.now();
+
   if (data.type === 'full') {
     setLobbyStatus('err', 'Room is full (4 players max).');
+    return;
+  }
+  if (data.type === 'ping') {
+    // Respond immediately — host uses this to detect dead clients
+    if (MP.hostConn?.open) { try { MP.hostConn.send({ type: 'pong', t: data.t }); } catch(e){} }
     return;
   }
   if (data.type === 'assigned') {
@@ -522,6 +534,8 @@ function mpBeginGameAsHost(data) {
   mpChatSystem('💬 Tap the 💬 button (top-right) to negotiate with opponents!');
   if (data.tutCheck) startTutorial(); else showPhaseAnnounce();
   glog(`=== ONLINE GAME STARTED — ${humanCount} players ===`, 'phase');
+  // Start heartbeat to detect silent drops
+  mpStartHeartbeat();
 }
 
 function mpClientBeginGame(data) {
@@ -565,6 +579,7 @@ function mpSerialiseGS() {
       cash: p.cash, actionsLeft: p.actionsLeft, stocks: p.stocks,
       ceo: p.ceo, fortified: p.fortified, _noTakeover: p._noTakeover, _noAcquire: p._noAcquire||false,
       _revPenalty: p._revPenalty, _lastTOFail: p._lastTOFail||0, _declaredBankrupt: p._declaredBankrupt||false,
+      _brokeCount: p._brokeCount||0,
       tactics: p.tactics.map(t => ({ name:t.name, icon:t.icon, effect:t.effect, used:t.used,
         poolIdx: TACTICS_POOL.findIndex(tp => tp.name === t.name) })),
     })),
@@ -614,6 +629,7 @@ function mpApplyState(gs) {
     _noAcquire:  p._noAcquire  || false,
     _lastTOFail: p._lastTOFail || 0,
     _declaredBankrupt: p._declaredBankrupt || false,
+    _brokeCount: p._brokeCount || 0,
     tactics: p.tactics.map(t => {
       const pool = t.poolIdx >= 0 ? TACTICS_POOL[t.poolIdx] : TACTICS_POOL[0];
       return { ...pool, used: t.used };
@@ -634,6 +650,7 @@ function mpApplyState(gs) {
 
   // ── First packet for client: start tutorial or phase announce ──
   if (!hadPlayers && !MP.isHost) {
+    mpStartClientWatchdog(); // begin monitoring for host silence
     if (MP.tutCheck ?? true) {
       startTutorial();
     } else {
@@ -681,6 +698,84 @@ function mpApplyState(gs) {
 function mpBroadcastState() {
   if (!MP.active || !MP.isHost) return;
   mpHostBroadcast({ type:'state', gs: mpSerialiseGS() });
+}
+
+/* ─────────────────────────────────────────────
+   HEARTBEAT SYSTEM
+   Host pings all clients every 8s.
+   Client must pong within 16s or host skips their turn.
+   Client detects host silence after 30s — shows reconnect modal.
+───────────────────────────────────────────── */
+const MP_PING_INTERVAL  = 8000;   // host sends ping every 8s
+const MP_PING_TIMEOUT   = 18000;  // client must respond within 18s (2+ missed pings)
+const MP_CLIENT_SILENCE = 30000;  // client shows modal if no packet in 30s
+
+let _mpPingInterval   = null;  // host side
+let _mpLastPongTime   = {};    // host: { peerId: timestamp }
+let _mpClientWatchdog = null;  // client side
+let _mpLastHostPacket = 0;     // client: timestamp of last packet from host
+let _mpSilenceModal   = false; // client: modal already shown
+
+function mpStartHeartbeat() {
+  if (!MP.isHost) return;
+  clearInterval(_mpPingInterval);
+  _mpPingInterval = setInterval(() => {
+    if (!MP.active || GS.gameOver) { clearInterval(_mpPingInterval); return; }
+    const now = Date.now();
+    mpHostBroadcast({ type: 'ping', t: now });
+
+    // Check each connected client for missed pongs
+    Object.entries(MP.conns).forEach(([peerId, conn]) => {
+      const last = _mpLastPongTime[peerId] || now; // first ping: grace
+      _mpLastPongTime[peerId] = _mpLastPongTime[peerId] || now;
+      if (now - last > MP_PING_TIMEOUT) {
+        // Client appears dead — find their slot
+        const slot = MP.slots.findIndex(s => s.peerId === peerId);
+        if (slot !== -1 && GS.currentPlayerIdx === slot && !GS.gameOver) {
+          glog(`⚠ ${GS.players[slot]?.name || 'Player'} connection lost — skipping turn.`, 'warn');
+          mpChatSystem(`⚠ ${GS.players[slot]?.name || 'Player'} timed out — turn skipped.`);
+          _mpLastPongTime[peerId] = now; // reset to avoid spam
+          mpEndTurnForSlot(slot);
+        }
+      }
+    });
+  }, MP_PING_INTERVAL);
+}
+
+function mpStartClientWatchdog() {
+  if (MP.isHost) return;
+  _mpLastHostPacket = Date.now();
+  _mpSilenceModal   = false;
+  clearInterval(_mpClientWatchdog);
+  _mpClientWatchdog = setInterval(() => {
+    if (!MP.active || GS.gameOver) { clearInterval(_mpClientWatchdog); return; }
+    const silent = Date.now() - _mpLastHostPacket;
+    if (silent > MP_CLIENT_SILENCE && !_mpSilenceModal) {
+      _mpSilenceModal = true;
+      // Show reconnect modal with 45s countdown
+      let _secsLeft = 45;
+      let _silenceLeaveTimer = null;
+      const _tick = () => {
+        const cd = document.getElementById('_dc-countdown');
+        if (cd) cd.textContent = _secsLeft;
+        if (_secsLeft <= 0) { clearInterval(_silenceLeaveTimer); location.reload(); }
+        _secsLeft--;
+      };
+      showModal('⚠ Connection Lost', `
+        <p style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx-md);margin-bottom:10px">
+          No response from host in ${Math.round(MP_CLIENT_SILENCE/1000)}s. The connection may have dropped.
+        </p>
+        <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--tx-lo);margin-bottom:18px">
+          Auto-leaving in <b id="_dc-countdown" style="color:var(--amber)">45</b>s…
+        </p>
+        <div class="mbtns">
+          <button class="mbtn pri" onclick="location.reload()">Leave Now</button>
+          <button class="mbtn" onclick="closeModal();_mpSilenceModal=false;_mpLastHostPacket=Date.now();">Wait</button>
+        </div>`);
+      _silenceLeaveTimer = setInterval(_tick, 1000);
+      _tick();
+    }
+  }, 5000);
 }
 
 /* ─────────────────────────────────────────────
